@@ -1,0 +1,60 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Profile images - users can upload their own
+    // Matches: profile-images/{userId}/{fileName}
+    match /profile-images/{userId}/{fileName} {
+      allow read: if true; // Anyone can view profile images
+      allow write: if request.auth != null && request.auth.uid == userId; // Only users can upload to their own folder
+    }
+    
+    // Post images - authenticated users can upload, anyone can read
+    match /posts/images/{imageId} {
+      allow read: if true; // Anyone can view post images
+      allow write: if request.auth != null; // Only authenticated users can upload
+    }
+    
+    // Post videos - authenticated users can upload, anyone can read
+    match /posts/videos/{videoId} {
+      allow read: if true; // Anyone can view post videos
+      allow write: if request.auth != null; // Only authenticated users can upload
+    }
+    
+    // Prayer images - authenticated users can upload, anyone can read
+    match /prayers/images/{imageId} {
+      allow read: if true; // Anyone can view prayer images
+      allow write: if request.auth != null; // Only authenticated users can upload
+    }
+    
+    // Prayer videos - authenticated users can upload, anyone can read
+    match /prayers/videos/{videoId} {
+      allow read: if true; // Anyone can view prayer videos
+      allow write: if request.auth != null; // Only authenticated users can upload
+    }
+    
+    // Community headers - authenticated users can upload, anyone can read
+    match /communities/{communityId}/{allPaths=**} {
+      allow read: if true; // Anyone can view community media
+      allow write: if request.auth != null; // Only authenticated users can upload
+    }
+    
+    // Comment images - authenticated users can upload, anyone can read
+    match /comments/images/{imageId} {
+      allow read: if true; // Anyone can view comment images
+      allow write: if request.auth != null; // Only authenticated users can upload
+    }
+    
+    // Comment videos - authenticated users can upload, anyone can read
+    match /comments/videos/{videoId} {
+      allow read: if true; // Anyone can view comment videos
+      allow write: if request.auth != null; // Only authenticated users can upload
+    }
+    
+    // Partner content - authenticated users can upload, anyone can read
+    match /partners/{partnerType}/{mediaType}/{allPaths=**} {
+      allow read: if true; // Anyone can view partner media
+      allow write: if request.auth != null; // Only authenticated users can upload
+    }
+  }
+}
+

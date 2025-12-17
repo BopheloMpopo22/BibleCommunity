@@ -35,3 +35,37 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Logs
+*.log
+firebase-debug.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Build outputs
+build/
+dist/
+*.apk
+*.aab
+*.ipa
+
+# Temporary files
+*.tmp
+*.temp
