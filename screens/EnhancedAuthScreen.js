@@ -30,6 +30,8 @@ const EnhancedAuthScreen = ({ navigation }) => {
     confirmPassword: "",
     profilePicture: null,
   });
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
 
   useEffect(() => {
     // Listen for auth state changes
@@ -104,6 +106,14 @@ const EnhancedAuthScreen = ({ navigation }) => {
       }
       if (formData.password.length < 6) {
         Alert.alert("Error", "Password must be at least 6 characters");
+        return false;
+      }
+      if (!acceptedTerms) {
+        Alert.alert("Required", "Please accept the Terms of Service to continue");
+        return false;
+      }
+      if (!acceptedPrivacy) {
+        Alert.alert("Required", "Please accept the Privacy Policy to continue");
         return false;
       }
     }
@@ -519,6 +529,61 @@ const EnhancedAuthScreen = ({ navigation }) => {
                   </Text>
                 </TouchableOpacity>
               )}
+
+              {/* Legal Acceptance Checkboxes (only for sign-up) */}
+              {!isLogin && (
+                <View style={styles.legalSection}>
+                  <TouchableOpacity
+                    style={styles.checkboxContainer}
+                    onPress={() => setAcceptedTerms(!acceptedTerms)}
+                  >
+                    <View style={[
+                      styles.checkbox,
+                      acceptedTerms && styles.checkboxChecked
+                    ]}>
+                      {acceptedTerms && (
+                        <Ionicons name="checkmark" size={16} color="#fff" />
+                      )}
+                    </View>
+                    <View style={styles.checkboxTextContainer}>
+                      <Text style={styles.checkboxText}>
+                        I accept the{" "}
+                        <Text
+                          style={styles.checkboxLink}
+                          onPress={() => navigation.navigate("TermsOfService")}
+                        >
+                          Terms of Service
+                        </Text>
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.checkboxContainer}
+                    onPress={() => setAcceptedPrivacy(!acceptedPrivacy)}
+                  >
+                    <View style={[
+                      styles.checkbox,
+                      acceptedPrivacy && styles.checkboxChecked
+                    ]}>
+                      {acceptedPrivacy && (
+                        <Ionicons name="checkmark" size={16} color="#fff" />
+                      )}
+                    </View>
+                    <View style={styles.checkboxTextContainer}>
+                      <Text style={styles.checkboxText}>
+                        I accept the{" "}
+                        <Text
+                          style={styles.checkboxLink}
+                          onPress={() => navigation.navigate("PrivacyPolicy")}
+                        >
+                          Privacy Policy
+                        </Text>
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              )}
             </>
           )}
 
@@ -566,7 +631,12 @@ const EnhancedAuthScreen = ({ navigation }) => {
                 ? "Don't have an account? "
                 : "Already have an account? "}
             </Text>
-            <TouchableOpacity onPress={() => setIsLogin(!isLogin)}>
+            <TouchableOpacity onPress={() => {
+              setIsLogin(!isLogin);
+              // Reset checkboxes when switching modes
+              setAcceptedTerms(false);
+              setAcceptedPrivacy(false);
+            }}>
               <Text style={styles.toggleLink}>
                 {isLogin ? "Sign Up" : "Sign In"}
               </Text>
@@ -737,6 +807,45 @@ const styles = StyleSheet.create({
     color: "#1a365d",
     fontSize: 14,
     fontWeight: "500",
+  },
+  legalSection: {
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  checkboxContainer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 12,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: "#1a365d",
+    borderRadius: 4,
+    marginRight: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
+  checkboxChecked: {
+    backgroundColor: "#1a365d",
+    borderColor: "#1a365d",
+  },
+  checkboxTextContainer: {
+    flex: 1,
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  checkboxText: {
+    fontSize: 14,
+    color: "#666",
+    lineHeight: 20,
+  },
+  checkboxLink: {
+    color: "#1a365d",
+    fontWeight: "600",
+    textDecorationLine: "underline",
   },
   submitButton: {
     backgroundColor: "#1a365d",

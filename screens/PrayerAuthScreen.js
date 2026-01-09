@@ -24,6 +24,8 @@ const PrayerAuthScreen = ({ navigation }) => {
     password: "",
     confirmPassword: "",
   });
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
 
   useEffect(() => {
     // Check if user is already logged in
@@ -66,6 +68,14 @@ const PrayerAuthScreen = ({ navigation }) => {
       }
       if (formData.password.length < 6) {
         Alert.alert("Error", "Password must be at least 6 characters");
+        return false;
+      }
+      if (!acceptedTerms) {
+        Alert.alert("Required", "Please accept the Terms of Service to continue");
+        return false;
+      }
+      if (!acceptedPrivacy) {
+        Alert.alert("Required", "Please accept the Privacy Policy to continue");
         return false;
       }
     }
@@ -285,6 +295,61 @@ const PrayerAuthScreen = ({ navigation }) => {
               </View>
             )}
 
+            {/* Legal Acceptance Checkboxes (only for sign-up) */}
+            {!isLogin && (
+              <View style={styles.legalSection}>
+                <TouchableOpacity
+                  style={styles.checkboxContainer}
+                  onPress={() => setAcceptedTerms(!acceptedTerms)}
+                >
+                  <View style={[
+                    styles.checkbox,
+                    acceptedTerms && styles.checkboxChecked
+                  ]}>
+                    {acceptedTerms && (
+                      <Ionicons name="checkmark" size={16} color="#fff" />
+                    )}
+                  </View>
+                  <View style={styles.checkboxTextContainer}>
+                    <Text style={styles.checkboxText}>
+                      I accept the{" "}
+                      <Text
+                        style={styles.checkboxLink}
+                        onPress={() => navigation.navigate("TermsOfService")}
+                      >
+                        Terms of Service
+                      </Text>
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.checkboxContainer}
+                  onPress={() => setAcceptedPrivacy(!acceptedPrivacy)}
+                >
+                  <View style={[
+                    styles.checkbox,
+                    acceptedPrivacy && styles.checkboxChecked
+                  ]}>
+                    {acceptedPrivacy && (
+                      <Ionicons name="checkmark" size={16} color="#fff" />
+                    )}
+                  </View>
+                  <View style={styles.checkboxTextContainer}>
+                    <Text style={styles.checkboxText}>
+                      I accept the{" "}
+                      <Text
+                        style={styles.checkboxLink}
+                        onPress={() => navigation.navigate("PrivacyPolicy")}
+                      >
+                        Privacy Policy
+                      </Text>
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            )}
+
             <TouchableOpacity
               style={[styles.authButton, loading && styles.authButtonDisabled]}
               onPress={handleAuth}
@@ -309,6 +374,9 @@ const PrayerAuthScreen = ({ navigation }) => {
                   password: "",
                   confirmPassword: "",
                 });
+                // Reset checkboxes when switching modes
+                setAcceptedTerms(false);
+                setAcceptedPrivacy(false);
               }}
             >
               <Text style={styles.switchButtonText}>
@@ -468,6 +536,45 @@ const styles = StyleSheet.create({
   switchButtonText: {
     color: "#B0C4DE",
     fontSize: 14,
+  },
+  legalSection: {
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  checkboxContainer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 12,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: "#fff",
+    borderRadius: 4,
+    marginRight: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+  },
+  checkboxChecked: {
+    backgroundColor: "#1a365d",
+    borderColor: "#1a365d",
+  },
+  checkboxTextContainer: {
+    flex: 1,
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  checkboxText: {
+    fontSize: 14,
+    color: "#B0C4DE",
+    lineHeight: 20,
+  },
+  checkboxLink: {
+    color: "#fff",
+    fontWeight: "600",
+    textDecorationLine: "underline",
   },
 });
 

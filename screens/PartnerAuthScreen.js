@@ -30,6 +30,8 @@ const PartnerAuthScreen = ({ navigation, route }) => {
     confirmPassword: "",
     profilePicture: null,
   });
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
 
   useEffect(() => {
     // Check if user is already logged in
@@ -126,6 +128,17 @@ const PartnerAuthScreen = ({ navigation, route }) => {
       }
       if (formData.password.length < 6) {
         Alert.alert("Error", "Password must be at least 6 characters");
+        return false;
+      }
+      if (!acceptedTerms) {
+        Alert.alert(
+          "Required",
+          "Please accept the Terms of Service to continue"
+        );
+        return false;
+      }
+      if (!acceptedPrivacy) {
+        Alert.alert("Required", "Please accept the Privacy Policy to continue");
         return false;
       }
     }
@@ -279,30 +292,53 @@ const PartnerAuthScreen = ({ navigation, route }) => {
 
         {/* Partner Info Section */}
         <View style={styles.partnerInfoSection}>
-          <View style={[styles.iconContainer, { backgroundColor: `${partnerInfo.color}20` }]}>
-            <Ionicons name={partnerInfo.icon} size={48} color={partnerInfo.color} />
+          <View
+            style={[
+              styles.iconContainer,
+              { backgroundColor: `${partnerInfo.color}20` },
+            ]}
+          >
+            <Ionicons
+              name={partnerInfo.icon}
+              size={48}
+              color={partnerInfo.color}
+            />
           </View>
           <Text style={styles.partnerTitle}>{partnerInfo.title}</Text>
-          <Text style={styles.partnerDescription}>{partnerInfo.description}</Text>
+          <Text style={styles.partnerDescription}>
+            {partnerInfo.description}
+          </Text>
         </View>
 
         {/* Benefits */}
         <View style={styles.benefitsSection}>
           <Text style={styles.benefitsTitle}>What You Can Do:</Text>
           <View style={styles.benefitItem}>
-            <Ionicons name="checkmark-circle" size={20} color={partnerInfo.color} />
+            <Ionicons
+              name="checkmark-circle"
+              size={20}
+              color={partnerInfo.color}
+            />
             <Text style={styles.benefitText}>
               Create content that blesses thousands of users
             </Text>
           </View>
           <View style={styles.benefitItem}>
-            <Ionicons name="checkmark-circle" size={20} color={partnerInfo.color} />
+            <Ionicons
+              name="checkmark-circle"
+              size={20}
+              color={partnerInfo.color}
+            />
             <Text style={styles.benefitText}>
               Your content may be selected for daily features
             </Text>
           </View>
           <View style={styles.benefitItem}>
-            <Ionicons name="checkmark-circle" size={20} color={partnerInfo.color} />
+            <Ionicons
+              name="checkmark-circle"
+              size={20}
+              color={partnerInfo.color}
+            />
             <Text style={styles.benefitText}>
               Build your profile and track your contributions
             </Text>
@@ -317,7 +353,12 @@ const PartnerAuthScreen = ({ navigation, route }) => {
 
           {!isLogin && (
             <View style={styles.inputContainer}>
-              <Ionicons name="person-outline" size={20} color="#666" style={styles.inputIcon} />
+              <Ionicons
+                name="person-outline"
+                size={20}
+                color="#666"
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="Full Name"
@@ -330,7 +371,12 @@ const PartnerAuthScreen = ({ navigation, route }) => {
           )}
 
           <View style={styles.inputContainer}>
-            <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
+            <Ionicons
+              name="mail-outline"
+              size={20}
+              color="#666"
+              style={styles.inputIcon}
+            />
             <TextInput
               style={styles.input}
               placeholder="Email"
@@ -344,7 +390,12 @@ const PartnerAuthScreen = ({ navigation, route }) => {
           </View>
 
           <View style={styles.inputContainer}>
-            <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
+            <Ionicons
+              name="lock-closed-outline"
+              size={20}
+              color="#666"
+              style={styles.inputIcon}
+            />
             <TextInput
               style={styles.input}
               placeholder="Password"
@@ -367,13 +418,20 @@ const PartnerAuthScreen = ({ navigation, route }) => {
 
           {!isLogin && (
             <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
+              <Ionicons
+                name="lock-closed-outline"
+                size={20}
+                color="#666"
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="Confirm Password"
                 placeholderTextColor="#999"
                 value={formData.confirmPassword}
-                onChangeText={(value) => handleInputChange("confirmPassword", value)}
+                onChangeText={(value) =>
+                  handleInputChange("confirmPassword", value)
+                }
                 secureTextEntry={!showPassword}
               />
             </View>
@@ -386,17 +444,84 @@ const PartnerAuthScreen = ({ navigation, route }) => {
             >
               <Ionicons name="camera-outline" size={20} color="#1a365d" />
               <Text style={styles.profilePictureText}>
-                {formData.profilePicture ? "Change Profile Picture" : "Add Profile Picture (Optional)"}
+                {formData.profilePicture
+                  ? "Change Profile Picture"
+                  : "Add Profile Picture (Optional)"}
               </Text>
             </TouchableOpacity>
           )}
 
           {formData.profilePicture && !isLogin && (
-            <Image source={{ uri: formData.profilePicture }} style={styles.profilePreview} />
+            <Image
+              source={{ uri: formData.profilePicture }}
+              style={styles.profilePreview}
+            />
+          )}
+
+          {/* Legal Acceptance Checkboxes (only for sign-up) */}
+          {!isLogin && (
+            <View style={styles.legalSection}>
+              <TouchableOpacity
+                style={styles.checkboxContainer}
+                onPress={() => setAcceptedTerms(!acceptedTerms)}
+              >
+                <View
+                  style={[
+                    styles.checkbox,
+                    acceptedTerms && styles.checkboxChecked,
+                  ]}
+                >
+                  {acceptedTerms && (
+                    <Ionicons name="checkmark" size={16} color="#fff" />
+                  )}
+                </View>
+                <View style={styles.checkboxTextContainer}>
+                  <Text style={styles.checkboxText}>
+                    I accept the{" "}
+                    <Text
+                      style={styles.checkboxLink}
+                      onPress={() => navigation.navigate("TermsOfService")}
+                    >
+                      Terms of Service
+                    </Text>
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.checkboxContainer}
+                onPress={() => setAcceptedPrivacy(!acceptedPrivacy)}
+              >
+                <View
+                  style={[
+                    styles.checkbox,
+                    acceptedPrivacy && styles.checkboxChecked,
+                  ]}
+                >
+                  {acceptedPrivacy && (
+                    <Ionicons name="checkmark" size={16} color="#fff" />
+                  )}
+                </View>
+                <View style={styles.checkboxTextContainer}>
+                  <Text style={styles.checkboxText}>
+                    I accept the{" "}
+                    <Text
+                      style={styles.checkboxLink}
+                      onPress={() => navigation.navigate("PrivacyPolicy")}
+                    >
+                      Privacy Policy
+                    </Text>
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
           )}
 
           <TouchableOpacity
-            style={[styles.submitButton, { backgroundColor: partnerInfo.color }]}
+            style={[
+              styles.submitButton,
+              { backgroundColor: partnerInfo.color },
+            ]}
             onPress={handleSubmit}
             disabled={loading}
           >
@@ -420,7 +545,12 @@ const PartnerAuthScreen = ({ navigation, route }) => {
 
           <TouchableOpacity
             style={styles.toggleButton}
-            onPress={() => setIsLogin(!isLogin)}
+            onPress={() => {
+              setIsLogin(!isLogin);
+              // Reset checkboxes when switching modes
+              setAcceptedTerms(false);
+              setAcceptedPrivacy(false);
+            }}
           >
             <Text style={styles.toggleText}>
               {isLogin
@@ -558,6 +688,45 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 16,
   },
+  legalSection: {
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  checkboxContainer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 12,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: "#1a365d",
+    borderRadius: 4,
+    marginRight: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
+  checkboxChecked: {
+    backgroundColor: "#1a365d",
+    borderColor: "#1a365d",
+  },
+  checkboxTextContainer: {
+    flex: 1,
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  checkboxText: {
+    fontSize: 14,
+    color: "#666",
+    lineHeight: 20,
+  },
+  checkboxLink: {
+    color: "#1a365d",
+    fontWeight: "600",
+    textDecorationLine: "underline",
+  },
   submitButton: {
     backgroundColor: "#1a365d",
     paddingVertical: 16,
@@ -601,4 +770,3 @@ const styles = StyleSheet.create({
 });
 
 export default PartnerAuthScreen;
-

@@ -1070,6 +1070,12 @@ const CommunityScreen = ({ navigation }) => {
               >
                 <Ionicons name="search" size={24} color="#333" />
               </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.searchButton}
+                onPress={() => navigation.navigate("Settings")}
+              >
+                <Ionicons name="settings-outline" size={24} color="#333" />
+              </TouchableOpacity>
               <NotificationBadge
                 onPress={() => navigation.navigate("Notifications")}
                 size={24}

@@ -50,6 +50,9 @@ import PrayerTimeScreen from "./screens/PrayerTimeScreen";
 import PrayerAuthScreen from "./screens/PrayerAuthScreen";
 import BookstoreScreen from "./screens/BookstoreScreen";
 import BookDetailScreen from "./screens/BookDetailScreen";
+import PrivacyPolicyScreen from "./screens/PrivacyPolicyScreen";
+import TermsOfServiceScreen from "./screens/TermsOfServiceScreen";
+import SettingsScreen from "./screens/SettingsScreen";
 const Tab = createBottomTabNavigator();
 const PrayerStack = createStackNavigator();
 const CommunityStack = createStackNavigator();
@@ -132,6 +135,9 @@ function PrayerStackScreen() {
       />
       <PrayerStack.Screen name="PartnerWords" component={PartnerWordsScreen} />
       <PrayerStack.Screen name="VideoPreview" component={VideoPreviewScreen} />
+      <PrayerStack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+      <PrayerStack.Screen name="TermsOfService" component={TermsOfServiceScreen} />
+      <PrayerStack.Screen name="Settings" component={SettingsScreen} />
     </PrayerStack.Navigator>
   );
 }
@@ -168,6 +174,9 @@ function CommunityStackScreen() {
         component={NotificationScreen}
       />
       <CommunityStack.Screen name="Search" component={SearchScreen} />
+      <CommunityStack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+      <CommunityStack.Screen name="TermsOfService" component={TermsOfServiceScreen} />
+      <CommunityStack.Screen name="Settings" component={SettingsScreen} />
     </CommunityStack.Navigator>
   );
 }
