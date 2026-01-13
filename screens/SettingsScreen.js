@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Platform,
   Alert,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { auth } from "../config/firebase";
@@ -59,12 +60,31 @@ const SettingsScreen = ({ navigation }) => {
     );
   };
 
-  const handleContactSupport = () => {
-    Alert.alert(
-      "Contact Support",
-      "Email us at: support@biblecommunity.app",
-      [{ text: "OK" }]
-    );
+  const handleContactSupport = async () => {
+    const supportEmail = "bophelompopo22@gmail.com";
+    const subject = "Bible Community App Support";
+    const body = "Hello,\n\nI need help with:\n\n";
+    
+    const mailtoUrl = `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    
+    try {
+      const canOpen = await Linking.canOpenURL(mailtoUrl);
+      if (canOpen) {
+        await Linking.openURL(mailtoUrl);
+      } else {
+        Alert.alert(
+          "Contact Support",
+          `Email us at: ${supportEmail}\n\nYou can copy this email address and send us a message.`,
+          [{ text: "OK" }]
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        "Contact Support",
+        `Email us at: ${supportEmail}\n\nYou can copy this email address and send us a message.`,
+        [{ text: "OK" }]
+      );
+    }
   };
 
   const renderSettingItem = (icon, title, subtitle, onPress, showArrow = true) => {
@@ -127,13 +147,13 @@ const SettingsScreen = ({ navigation }) => {
                 "person-outline",
                 "Edit Profile",
                 "Update your name and profile picture",
-                () => Alert.alert("Coming Soon", "Profile editing will be available soon.")
+                () => navigation.navigate("EditProfile")
               )}
               {renderSettingItem(
                 "notifications-outline",
                 "Notifications",
                 "Manage notification preferences",
-                () => Alert.alert("Coming Soon", "Notification settings will be available soon.")
+                () => navigation.navigate("NotificationSettings")
               )}
               {renderSettingItem(
                 "time-outline",
