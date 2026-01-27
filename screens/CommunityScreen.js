@@ -829,17 +829,19 @@ const CommunityScreen = ({ navigation }) => {
           // Handle both authorId (new format) and author_id (old format)
           const postAuthorId = post.authorId || post.author_id;
           
-          const userIsAuthor = postAuthorId && currentUser.uid === postAuthorId;
+          // If post has no authorId, allow deletion for authenticated users (legacy/test posts)
+          // If post has authorId, only allow if it matches current user
+          const userIsAuthor = postAuthorId 
+            ? currentUser.uid === postAuthorId 
+            : true; // Allow deletion of posts without authorId (old test posts)
           
           // Debug logging (can be removed later)
-          if (postAuthorId) {
-            console.log("Post author check:", {
-              postId: post.id,
-              postAuthorId: postAuthorId,
-              currentUserId: currentUser.uid,
-              isAuthor: userIsAuthor
-            });
-          }
+          console.log("Post author check:", {
+            postId: post.id,
+            postAuthorId: postAuthorId || "missing",
+            currentUserId: currentUser.uid,
+            isAuthor: userIsAuthor
+          });
           
           setIsAuthor(userIsAuthor);
         } catch (error) {

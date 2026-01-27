@@ -106,7 +106,19 @@ const MediaPostCard = ({
 
         // Check if user is the author - handle both authorId and author_id
         const postAuthorId = post.authorId || post.author_id;
-        const userIsAuthor = postAuthorId && currentUser.uid === postAuthorId;
+        
+        // If post has no authorId, allow deletion for authenticated users (legacy/test posts)
+        // If post has authorId, only allow if it matches current user
+        const userIsAuthor = postAuthorId 
+          ? currentUser.uid === postAuthorId 
+          : true; // Allow deletion of posts without authorId (old test posts)
+        
+        console.log("MediaPostCard author check:", {
+          postId: post.id,
+          postAuthorId: postAuthorId || "missing",
+          currentUserId: currentUser.uid,
+          isAuthor: userIsAuthor
+        });
         
         setIsAuthor(userIsAuthor);
       } catch (error) {
