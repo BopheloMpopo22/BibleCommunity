@@ -340,6 +340,59 @@ class PrayerFirebaseService {
       return null;
     }
   }
+
+  // Delete a prayer (author only)
+  static async deletePrayer(prayerId) {
+    try {
+      // Get current user to verify ownership
+      const userData = await this.getCurrentUser();
+      if (!userData || !userData.uid) {
+        throw new Error("You must be signed in to delete a prayer");
+      }
+
+      // First, get the prayer to check ownership
+      const prayerRef = doc(db, "prayers", prayerId);
+      const prayerDoc = await getDoc(prayerRef);
+      
+      if (!prayerDoc.exists()) {
+        // Prayer doesn't exist in Firestore, just remove from local cache
+        const localPrayers = await this.getLocalPrayers();
+        const filteredPrayers = localPrayers.filter((p) => p.id !== prayerId);
+        await AsyncStorage.setItem("community_prayers", JSON.stringify(filteredPrayers));
+        return { success: true };
+      }
+
+      const prayerData = prayerDoc.data();
+      
+      // Check if user is the author
+      const prayerAuthorId = prayerData.authorId || prayerData.author_id || null;
+      
+      if (!prayerAuthorId) {
+        // Old prayer without authorId - allow deletion for legacy prayers if user is authenticated
+        console.warn("Prayer missing authorId field - allowing deletion for legacy prayer");
+      } else if (prayerAuthorId !== userData.uid) {
+        // User is not the author
+        throw new Error("You don't have permission to delete this prayer. Only the author can delete their own prayers.");
+      }
+
+      // User is authorized - delete the prayer
+      await deleteDoc(prayerRef);
+
+      // Remove from local storage cache
+      const localPrayers = await this.getLocalPrayers();
+      const filteredPrayers = localPrayers.filter((p) => p.id !== prayerId);
+      await AsyncStorage.setItem("community_prayers", JSON.stringify(filteredPrayers));
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error deleting prayer:", error);
+      // Return more specific error message
+      if (error.message.includes("permission") || error.message.includes("must be signed in")) {
+        throw error;
+      }
+      throw new Error(error.message || "Failed to delete prayer");
+    }
+  }
 }
 
 export default PrayerFirebaseService;

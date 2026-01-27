@@ -11,6 +11,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import PrayerService from "../services/PrayerService";
+import PrayerFirebaseService from "../services/PrayerFirebaseService";
+import WorkingAuthService from "../services/WorkingAuthService";
 
 const AllCommunityPrayersScreen = ({ navigation }) => {
   const [prayers, setPrayers] = useState([]);
@@ -83,49 +85,113 @@ const AllCommunityPrayersScreen = ({ navigation }) => {
     return prayerDate.toLocaleDateString();
   };
 
-  const renderPrayerItem = ({ item }) => (
-    <View style={styles.prayerCard}>
-      <View style={styles.prayerHeader}>
-        <View style={styles.titleContainer}>
-          <Text style={styles.prayerTitle}>{item.title}</Text>
-          {item.category && (
-            <View
-              style={[
-                styles.categoryBadge,
-                { backgroundColor: getCategoryColor(item.category) },
-              ]}
+  const PrayerCardWithDelete = ({ prayer }) => {
+    const [isAuthor, setIsAuthor] = useState(false);
+
+    useEffect(() => {
+      const checkAuthor = async () => {
+        try {
+          const currentUser = await WorkingAuthService.getCurrentUser();
+          if (!currentUser || !currentUser.uid) {
+            setIsAuthor(false);
+            return;
+          }
+
+          // Check if user is the author
+          const prayerAuthorId = prayer.authorId || prayer.author_id;
+          const userIsAuthor = prayerAuthorId && currentUser.uid === prayerAuthorId;
+          setIsAuthor(userIsAuthor);
+        } catch (error) {
+          console.error("Error checking author:", error);
+          setIsAuthor(false);
+        }
+      };
+      checkAuthor();
+    }, [prayer.authorId, prayer.author_id]);
+
+    const handleDelete = async () => {
+      Alert.alert(
+        "Delete Prayer",
+        "Are you sure you want to delete this prayer? This action cannot be undone.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await PrayerFirebaseService.deletePrayer(prayer.id);
+                loadPrayers(); // Refresh prayers after deletion
+                Alert.alert("Success", "Prayer deleted successfully");
+              } catch (error) {
+                const errorMessage = error.message || "Failed to delete prayer. Please try again.";
+                Alert.alert("Error", errorMessage);
+              }
+            },
+          },
+        ]
+      );
+    };
+
+    return (
+      <View style={styles.prayerCard}>
+        <View style={styles.prayerHeader}>
+          <View style={styles.titleContainer}>
+            <Text style={styles.prayerTitle}>{prayer.title}</Text>
+            {prayer.category && (
+              <View
+                style={[
+                  styles.categoryBadge,
+                  { backgroundColor: getCategoryColor(prayer.category) },
+                ]}
+              >
+                <Text style={styles.categoryText}>{prayer.category}</Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.headerRight}>
+            <Text style={styles.timestamp}>{formatTimestamp(prayer.timestamp)}</Text>
+            {/* Three dots menu - only show for author */}
+            {isAuthor && (
+              <TouchableOpacity
+                style={styles.moreButton}
+                onPress={handleDelete}
+              >
+                <Ionicons name="ellipsis-horizontal" size={20} color="#666" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        <Text style={styles.prayerContent}>{prayer.body || prayer.content}</Text>
+
+        <View style={styles.prayerFooter}>
+          <Text style={styles.author}>- {prayer.author}</Text>
+
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => handleLike(prayer.id)}
             >
-              <Text style={styles.categoryText}>{item.category}</Text>
-            </View>
-          )}
-        </View>
-        <Text style={styles.timestamp}>{formatTimestamp(item.timestamp)}</Text>
-      </View>
+              <Ionicons name="heart-outline" size={16} color="#1a365d" />
+              <Text style={styles.actionText}>{prayer.likes || 0}</Text>
+            </TouchableOpacity>
 
-      <Text style={styles.prayerContent}>{item.body || item.content}</Text>
-
-      <View style={styles.prayerFooter}>
-        <Text style={styles.author}>- {item.author}</Text>
-
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleLike(item.id)}
-          >
-            <Ionicons name="heart-outline" size={16} color="#1a365d" />
-            <Text style={styles.actionText}>{item.likes || 0}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleComment(item.id)}
-          >
-            <Ionicons name="chatbubble-outline" size={16} color="#1a365d" />
-            <Text style={styles.actionText}>{item.comments || 0}</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => handleComment(prayer.id)}
+            >
+              <Ionicons name="chatbubble-outline" size={16} color="#1a365d" />
+              <Text style={styles.actionText}>{prayer.comments || 0}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
-    </View>
+    );
+  };
+
+  const renderPrayerItem = ({ item }) => (
+    <PrayerCardWithDelete key={item.id} prayer={item} />
   );
 
   const renderEmptyState = () => (
@@ -291,6 +357,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 8,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  moreButton: {
+    padding: 4,
+    marginLeft: 8,
   },
   titleContainer: {
     flex: 1,
