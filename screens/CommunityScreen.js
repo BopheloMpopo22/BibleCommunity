@@ -820,18 +820,35 @@ const CommunityScreen = ({ navigation }) => {
       const checkAuthor = async () => {
         try {
           const currentUser = await WorkingAuthService.getCurrentUser();
-          const userIsAuthor =
-            currentUser &&
-            currentUser.uid &&
-            post.authorId &&
-            currentUser.uid === post.authorId;
+          if (!currentUser || !currentUser.uid) {
+            setIsAuthor(false);
+            return;
+          }
+
+          // Check if user is the author
+          // Handle both authorId (new format) and author_id (old format)
+          const postAuthorId = post.authorId || post.author_id;
+          
+          const userIsAuthor = postAuthorId && currentUser.uid === postAuthorId;
+          
+          // Debug logging (can be removed later)
+          if (postAuthorId) {
+            console.log("Post author check:", {
+              postId: post.id,
+              postAuthorId: postAuthorId,
+              currentUserId: currentUser.uid,
+              isAuthor: userIsAuthor
+            });
+          }
+          
           setIsAuthor(userIsAuthor);
         } catch (error) {
+          console.error("Error checking author:", error);
           setIsAuthor(false);
         }
       };
       checkAuthor();
-    }, [post.authorId]);
+    }, [post.authorId, post.author_id]);
 
     const handleDelete = async () => {
       Alert.alert(

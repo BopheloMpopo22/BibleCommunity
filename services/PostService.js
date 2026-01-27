@@ -659,26 +659,47 @@ class PostService {
   // Delete a post (author only)
   async deletePost(postId) {
     try {
-      // Check if post exists in Firestore before attempting deletion
-      const postRef = doc(db, "posts", postId);
-      
-      // Try to delete from Firestore
-      // If post doesn't exist, Firestore will throw an error, but we'll handle it gracefully
-      try {
-        await deleteDoc(postRef);
-      } catch (firestoreError) {
-        // If post doesn't exist in Firestore (already deleted), that's okay
-        // We'll still remove it from local cache
-        if (firestoreError.code !== 'not-found' && firestoreError.code !== 'permission-denied') {
-          throw firestoreError;
-        }
-        // If it's a permission error, throw it so user knows they can't delete
-        if (firestoreError.code === 'permission-denied') {
-          throw new Error("You don't have permission to delete this post. Only the author can delete their own posts.");
-        }
+      // Get current user to verify ownership
+      const userData = await this.getCurrentUser();
+      if (!userData || !userData.uid) {
+        throw new Error("You must be signed in to delete a post");
       }
 
-      // Remove from local storage cache (always do this, even if Firestore delete failed)
+      // First, get the post to check ownership
+      const postRef = doc(db, "posts", postId);
+      const { getDoc } = await import("firebase/firestore");
+      const postDoc = await getDoc(postRef);
+      
+      if (!postDoc.exists()) {
+        // Post doesn't exist in Firestore, just remove from cache
+        const existing = await AsyncStorage.getItem("localPosts");
+        if (existing) {
+          const arr = JSON.parse(existing).filter((p) => p.id !== postId);
+          await AsyncStorage.setItem("localPosts", JSON.stringify(arr));
+        }
+        return { success: true };
+      }
+
+      const postData = postDoc.data();
+      
+      // Check if user is the author
+      // Handle both old posts (might not have authorId) and new posts
+      const postAuthorId = postData.authorId || postData.author_id || null;
+      
+      if (!postAuthorId) {
+        // Old post without authorId - check if author name matches (fallback)
+        // But this is not reliable, so we'll allow deletion if user is authenticated
+        // and the post has no authorId (legacy posts)
+        console.warn("Post missing authorId field - allowing deletion for legacy post");
+      } else if (postAuthorId !== userData.uid) {
+        // User is not the author
+        throw new Error("You don't have permission to delete this post. Only the author can delete their own posts.");
+      }
+
+      // User is authorized - delete the post
+      await deleteDoc(postRef);
+
+      // Remove from local storage cache
       const existing = await AsyncStorage.getItem("localPosts");
       if (existing) {
         const arr = JSON.parse(existing).filter((p) => p.id !== postId);
@@ -689,7 +710,7 @@ class PostService {
     } catch (error) {
       console.error("Error deleting post:", error);
       // Return more specific error message
-      if (error.message.includes("permission")) {
+      if (error.message.includes("permission") || error.message.includes("must be signed in")) {
         throw error;
       }
       throw new Error(error.message || "Failed to delete post");
