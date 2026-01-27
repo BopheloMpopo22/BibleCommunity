@@ -1,4 +1,4 @@
-﻿rules_version = '2';
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // Communities collection - anyone can read, only authenticated users can create
@@ -100,3 +100,4 @@ service cloud.firestore {
     }
   }
 }
+
