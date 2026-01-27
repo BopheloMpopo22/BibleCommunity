@@ -12,15 +12,28 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { auth } from "../config/firebase";
 import WorkingAuthService from "../services/WorkingAuthService";
+import DarkModeService from "../services/DarkModeService";
 
 const SettingsScreen = ({ navigation }) => {
   const [user, setUser] = useState(null);
   const [appVersion, setAppVersion] = useState("1.0.0");
+  const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
     loadUserInfo();
     loadAppVersion();
+    loadDarkMode();
   }, []);
+
+  const loadDarkMode = async () => {
+    const isDark = await DarkModeService.isDarkMode();
+    setDarkMode(isDark);
+  };
+
+  const handleToggleDarkMode = async () => {
+    const newState = await DarkModeService.toggleDarkMode();
+    setDarkMode(newState);
+  };
 
   const loadUserInfo = async () => {
     try {
@@ -177,6 +190,28 @@ const SettingsScreen = ({ navigation }) => {
               <Text style={styles.signInButtonText}>Sign In to Access Settings</Text>
             </TouchableOpacity>
           )}
+        </View>
+
+        {/* Appearance Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Appearance</Text>
+          <View style={styles.settingItem}>
+            <View style={styles.settingItemLeft}>
+              <Ionicons name={darkMode ? "moon" : "sunny-outline"} size={24} color="#1a365d" />
+              <View style={styles.settingItemText}>
+                <Text style={styles.settingItemTitle}>Dark Mode</Text>
+                <Text style={styles.settingItemSubtitle}>
+                  {darkMode ? "Enabled" : "Disabled"} - Applies to Community screen
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={[styles.toggle, darkMode && styles.toggleActive]}
+              onPress={handleToggleDarkMode}
+            >
+              <View style={[styles.toggleThumb, darkMode && styles.toggleThumbActive]} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Legal Section */}
@@ -364,6 +399,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#ccc",
     textAlign: "center",
+  },
+  toggle: {
+    width: 50,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#e0e0e0",
+    justifyContent: "center",
+    paddingHorizontal: 2,
+  },
+  toggleActive: {
+    backgroundColor: "#1a365d",
+  },
+  toggleThumb: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  toggleThumbActive: {
+    transform: [{ translateX: 20 }],
   },
 });
 

@@ -35,18 +35,36 @@ const ASSET_WALLPAPER_MAP = {
   "bible": require("../assets/open-bible-black-background.jpg"),
 };
 
+const ADMIN_EMAIL = "bophelompopo22@gmail.com";
+
 const PartnerScripturesScreen = ({ navigation }) => {
   const [scriptures, setScriptures] = useState([]);
   const [selectedScripture, setSelectedScripture] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
   const [filter, setFilter] = useState("all"); // all, morning, afternoon, evening
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useFocusEffect(
     React.useCallback(() => {
+      checkAdminStatus();
       loadScriptures();
     }, [])
   );
+
+  const checkAdminStatus = async () => {
+    try {
+      const currentUser = await WorkingAuthService.getCurrentUser();
+      if (currentUser && currentUser.email === ADMIN_EMAIL) {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+      }
+    } catch (error) {
+      console.error("Error checking admin status:", error);
+      setIsAdmin(false);
+    }
+  };
 
   const loadScriptures = async () => {
     try {
@@ -77,6 +95,12 @@ const PartnerScripturesScreen = ({ navigation }) => {
   };
 
   const handleSelectDate = async () => {
+    // Check if user is admin
+    if (!isAdmin) {
+      Alert.alert("Access Denied", "Only the administrator can schedule dates. You can view scheduled dates but cannot change them.");
+      return;
+    }
+
     if (!selectedDate.trim()) {
       Alert.alert("Required", "Please enter a date");
       return;
@@ -403,16 +427,23 @@ const PartnerScripturesScreen = ({ navigation }) => {
                   <Text style={styles.scriptureDate}>
                     {formatDate(scripture.selectedDate)}
                   </Text>
-                  <TouchableOpacity
-                    style={styles.selectButton}
-                    onPress={() => {
-                      setSelectedScripture(scripture);
-                      setShowDatePicker(true);
-                    }}
-                  >
-                    <Ionicons name="calendar" size={16} color="#228B22" />
-                    <Text style={styles.selectButtonText}>Select Date</Text>
-                  </TouchableOpacity>
+                  {isAdmin ? (
+                    <TouchableOpacity
+                      style={styles.selectButton}
+                      onPress={() => {
+                        setSelectedScripture(scripture);
+                        setShowDatePicker(true);
+                      }}
+                    >
+                      <Ionicons name="calendar" size={16} color="#228B22" />
+                      <Text style={styles.selectButtonText}>Select Date</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={styles.viewOnlyBadge}>
+                      <Ionicons name="eye" size={16} color="#666" />
+                      <Text style={styles.viewOnlyText}>View Only</Text>
+                    </View>
+                  )}
                 </View>
               </View>
             );
@@ -718,6 +749,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#2d5016",
     fontWeight: "600",
+  },
+  viewOnlyBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
+  },
+  viewOnlyText: {
+    fontSize: 12,
+    color: "#666",
+    fontStyle: "italic",
   },
   modalOverlay: {
     flex: 1,

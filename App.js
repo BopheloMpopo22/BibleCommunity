@@ -183,6 +183,7 @@ function CommunityStackScreen() {
       <CommunityStack.Screen name="Settings" component={SettingsScreen} />
       <CommunityStack.Screen name="EditProfile" component={EditProfileScreen} />
       <CommunityStack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
+      <CommunityStack.Screen name="PrayerTimeScreen" component={PrayerTimeScreen} />
     </CommunityStack.Navigator>
   );
 }

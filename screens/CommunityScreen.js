@@ -24,6 +24,7 @@ import CommunityStatsService from "../services/CommunityStatsService";
 import CommunityDataService from "../services/CommunityDataService";
 import TimeBasedPrayerService from "../services/TimeBasedPrayerService";
 import { useScroll } from "../services/ScrollContext";
+import DarkModeService from "../services/DarkModeService";
 
 // Import time-based images
 const MorningGradient = require("../assets/morning-gradient.jpg");
@@ -49,6 +50,7 @@ const CommunityScreen = ({ navigation }) => {
   // removed Animated tabs state
   const scrollIdleTimeoutRef = React.useRef(null);
   const { setIsScrolling } = useScroll();
+  const [darkMode, setDarkMode] = useState(false);
 
   // Track time of day and previous image to prevent black screen during transitions
   const [timeOfDay, setTimeOfDay] = useState(
@@ -749,7 +751,7 @@ const CommunityScreen = ({ navigation }) => {
 
   const renderTestimonyCard = (testimony) => (
     <TouchableOpacity
-      style={styles.testimonyCard}
+      style={dynamicStyles.testimonyCard}
       onPress={async () => {
         try {
           await PostService.trackView(testimony.id);
@@ -762,34 +764,34 @@ const CommunityScreen = ({ navigation }) => {
       <View style={styles.testimonyHeader}>
         <View style={styles.testimonyAuthor}>
           <View style={styles.testimonyAvatar}>
-            <Ionicons name="person" size={16} color="#666" />
+            <Ionicons name="person" size={16} color={darkMode ? "#fff" : "#666"} />
           </View>
           <View>
-            <Text style={styles.testimonyAuthorName}>{testimony.author}</Text>
-            <Text style={styles.testimonyTime}>{testimony.timeAgo}</Text>
+            <Text style={dynamicStyles.testimonyAuthorName}>{testimony.author}</Text>
+            <Text style={dynamicStyles.testimonyTime}>{testimony.timeAgo}</Text>
           </View>
         </View>
         <View style={styles.testimonyType}>
           <Ionicons name="star" size={16} color="#FFD700" />
         </View>
       </View>
-      <Text style={styles.testimonyTitle}>{testimony.title}</Text>
-      <Text style={styles.testimonyContent}>{testimony.content}</Text>
+      <Text style={dynamicStyles.testimonyTitle}>{testimony.title}</Text>
+      <Text style={dynamicStyles.testimonyContent}>{testimony.content}</Text>
       <View style={styles.testimonyActions}>
         <TouchableOpacity style={styles.testimonyAction}>
-          <Ionicons name="heart-outline" size={16} color="#666" />
-          <Text style={styles.testimonyActionText}>{testimony.upvotes}</Text>
+          <Ionicons name="heart-outline" size={16} color={darkMode ? "#fff" : "#666"} />
+          <Text style={dynamicStyles.testimonyActionText}>{testimony.upvotes}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.testimonyAction}>
-          <Ionicons name="chatbubble-outline" size={16} color="#666" />
-          <Text style={styles.testimonyActionText}>{testimony.comments}</Text>
+          <Ionicons name="chatbubble-outline" size={16} color={darkMode ? "#fff" : "#666"} />
+          <Text style={dynamicStyles.testimonyActionText}>{testimony.comments}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.testimonyAction}>
-          <Ionicons name="share-outline" size={16} color="#666" />
+          <Ionicons name="share-outline" size={16} color={darkMode ? "#fff" : "#666"} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.testimonyAction}>
-          <Ionicons name="eye-outline" size={16} color="#666" />
-          <Text style={styles.testimonyActionText}>{testimony.views || 0}</Text>
+          <Ionicons name="eye-outline" size={16} color={darkMode ? "#fff" : "#666"} />
+          <Text style={dynamicStyles.testimonyActionText}>{testimony.views || 0}</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -860,7 +862,7 @@ const CommunityScreen = ({ navigation }) => {
     return (
       <TouchableOpacity
         key={post.id}
-        style={styles.postCard}
+        style={dynamicStyles.postCard}
         onPress={async () => {
           // Track view (non-blocking, works without auth)
           PostService.trackView(post.id).catch(() => {
@@ -871,8 +873,8 @@ const CommunityScreen = ({ navigation }) => {
       >
         <View style={styles.postHeader}>
           <View style={styles.postCommunity}>
-            <Ionicons name="people" size={16} color="#1a365d" />
-            <Text style={styles.postCommunityName}>{post.community}</Text>
+            <Ionicons name="people" size={16} color={darkMode ? "#fff" : "#1a365d"} />
+            <Text style={dynamicStyles.postCommunityName}>{post.community}</Text>
             {post.isTrending && (
               <View style={styles.trendingBadge}>
                 <Ionicons name="trending-up" size={12} color="#fff" />
@@ -881,51 +883,51 @@ const CommunityScreen = ({ navigation }) => {
             )}
           </View>
           <View style={styles.postHeaderRight}>
-            <Text style={styles.postTime}>{post.timeAgo}</Text>
+            <Text style={dynamicStyles.postTime}>{post.timeAgo}</Text>
             {/* Three dots menu - only show for author */}
             {isAuthor && (
               <TouchableOpacity
                 style={styles.moreButton}
                 onPress={handleDelete}
               >
-                <Ionicons name="ellipsis-horizontal" size={20} color="#666" />
+                <Ionicons name="ellipsis-horizontal" size={20} color={darkMode ? "#fff" : "#666"} />
               </TouchableOpacity>
             )}
           </View>
         </View>
 
-        <Text style={styles.postTitle}>{post.title}</Text>
-        <Text style={styles.postContent} numberOfLines={3}>
+        <Text style={dynamicStyles.postTitle}>{post.title}</Text>
+        <Text style={dynamicStyles.postContent} numberOfLines={3}>
           {post.content}
         </Text>
 
         <View style={styles.postFooter}>
           <View style={styles.postActions}>
             <TouchableOpacity style={styles.actionButton}>
-              <Ionicons name="heart-outline" size={20} color="#666" />
-              <Text style={styles.actionText}>
+              <Ionicons name="heart-outline" size={20} color={darkMode ? "#fff" : "#666"} />
+              <Text style={dynamicStyles.actionText}>
                 {post.likes || post.upvotes}
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.actionButton}>
-              <Ionicons name="chatbubble-outline" size={20} color="#666" />
-              <Text style={styles.actionText}>{post.comments}</Text>
+              <Ionicons name="chatbubble-outline" size={20} color={darkMode ? "#fff" : "#666"} />
+              <Text style={dynamicStyles.actionText}>{post.comments}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.actionButton}>
-              <Ionicons name="share-outline" size={20} color="#666" />
-              <Text style={styles.actionText}>Share</Text>
+              <Ionicons name="share-outline" size={20} color={darkMode ? "#fff" : "#666"} />
+              <Text style={dynamicStyles.actionText}>Share</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.actionButton}>
-              <Ionicons name="eye-outline" size={20} color="#666" />
-              <Text style={styles.actionText}>{post.views || 0}</Text>
+              <Ionicons name="eye-outline" size={20} color={darkMode ? "#fff" : "#666"} />
+              <Text style={dynamicStyles.actionText}>{post.views || 0}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.postType}>
-            <Text style={styles.postTypeText}>{post.type}</Text>
+            <Text style={[styles.postTypeText, { color: darkMode ? "#fff" : "#1a365d" }]}>{post.type}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -1000,7 +1002,7 @@ const CommunityScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.communityPosts}>
-            <Text style={styles.sectionTitle}>Recent Posts</Text>
+            <Text style={dynamicStyles.sectionTitle}>Recent Posts</Text>
             {posts
               .filter((post) => post.community === selectedCommunity.name)
               .map(renderPost)}
@@ -1009,6 +1011,19 @@ const CommunityScreen = ({ navigation }) => {
       </View>
     );
   }
+
+  // Load dark mode preference
+  useEffect(() => {
+    const loadDarkMode = async () => {
+      const isDark = await DarkModeService.isDarkMode();
+      setDarkMode(isDark);
+    };
+    loadDarkMode();
+    
+    // Listen for dark mode changes
+    const interval = setInterval(loadDarkMode, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Load data on component mount
   useEffect(() => {
@@ -1045,8 +1060,10 @@ const CommunityScreen = ({ navigation }) => {
     };
   }, []);
 
+  const dynamicStyles = getStyles(darkMode);
+  
   return (
-    <View style={styles.container}>
+    <View style={dynamicStyles.container}>
       {/* Time-based Background Image with Content Overlay */}
       <ImageBackground
         source={getTimeBasedImages().headerBG}
@@ -1058,8 +1075,8 @@ const CommunityScreen = ({ navigation }) => {
         <View style={styles.headerContent}>
           <View style={styles.headerTop}>
             <View>
-              <Text style={styles.headerTitle}>Community</Text>
-              <Text style={styles.headerSubtitle}>
+              <Text style={dynamicStyles.headerTitle}>Community</Text>
+              <Text style={dynamicStyles.headerSubtitle}>
                 Connect with fellow believers
               </Text>
             </View>
@@ -1170,7 +1187,7 @@ const CommunityScreen = ({ navigation }) => {
             )}
             {selectedTab === "communities" && (
               <View style={styles.communitiesHeader}>
-                <Text style={styles.sectionTitle}>Popular Communities</Text>
+                <Text style={dynamicStyles.sectionTitle}>Popular Communities</Text>
                 <TouchableOpacity
                   style={styles.createCommunityButton}
                   onPress={() => navigation.navigate("CreateCommunity")}
@@ -1181,7 +1198,7 @@ const CommunityScreen = ({ navigation }) => {
               </View>
             )}
             {selectedTab === "trending" && (
-              <Text style={styles.sectionTitle}>Trending Posts</Text>
+              <Text style={dynamicStyles.sectionTitle}>Trending Posts</Text>
             )}
             {selectedTab === "testimonies" && (
               <View style={styles.testimoniesSection}>
@@ -1197,7 +1214,7 @@ const CommunityScreen = ({ navigation }) => {
 
                 {/* Testimonies Header */}
                 <View style={styles.testimoniesHeader}>
-                  <Text style={styles.sectionTitle}>Testimonies</Text>
+                  <Text style={dynamicStyles.sectionTitle}>Testimonies</Text>
                   <TouchableOpacity
                     style={styles.shareTestimonyButton}
                     onPress={() => navigation.navigate("CreateTestimony")}
@@ -1209,7 +1226,7 @@ const CommunityScreen = ({ navigation }) => {
               </View>
             )}
             {(selectedTab === "new" || selectedTab === "top") && (
-              <Text style={styles.sectionTitle}>
+              <Text style={dynamicStyles.sectionTitle}>
                 {selectedTab === "new" ? "New Posts" : "Top Posts"}
               </Text>
             )}
@@ -1219,6 +1236,153 @@ const CommunityScreen = ({ navigation }) => {
     </View>
   );
 };
+
+// Helper function to get dynamic styles based on dark mode
+const getStyles = (darkMode) => ({
+  container: {
+    flex: 1,
+    backgroundColor: darkMode ? "#1a1a1a" : "#f5f5f5",
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: darkMode ? "#fff" : "#333",
+    marginBottom: 15,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: darkMode ? "#fff" : "#333",
+    letterSpacing: 0.5,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: darkMode ? "#fff" : "#333",
+    opacity: 0.9,
+  },
+  fixedTabsContainer: {
+    backgroundColor: darkMode ? "#2a2a2a" : "#fff",
+    marginHorizontal: 12,
+    marginBottom: 6,
+    borderRadius: 8,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+    position: "sticky",
+    top: 0,
+    zIndex: 100,
+  },
+  communityCard: {
+    backgroundColor: darkMode ? "#2a2a2a" : "#fff",
+    marginBottom: 15,
+    borderRadius: 15,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  communityName: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: darkMode ? "#fff" : "#333",
+    marginBottom: 5,
+  },
+  communityDescription: {
+    fontSize: 14,
+    color: darkMode ? "#ccc" : "#666",
+    marginBottom: 8,
+  },
+  postCard: {
+    backgroundColor: darkMode ? "#2a2a2a" : "#fff",
+    marginBottom: 15,
+    borderRadius: 15,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  testimonyCard: {
+    backgroundColor: darkMode ? "#2a2a2a" : "#fff",
+    marginBottom: 15,
+    borderRadius: 15,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  postTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: darkMode ? "#fff" : "#333",
+    marginBottom: 8,
+  },
+  postContent: {
+    fontSize: 14,
+    color: darkMode ? "#fff" : "#666",
+    lineHeight: 20,
+    marginBottom: 15,
+  },
+  postCommunityName: {
+    fontSize: 14,
+    color: darkMode ? "#fff" : "#1a365d",
+    fontWeight: "600",
+  },
+  postTime: {
+    fontSize: 12,
+    color: darkMode ? "#ccc" : "#999",
+  },
+  actionText: {
+    fontSize: 14,
+    color: darkMode ? "#fff" : "#666",
+    marginLeft: 5,
+  },
+  testimonyTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: darkMode ? "#fff" : "#333",
+    marginBottom: 10,
+  },
+  testimonyContent: {
+    fontSize: 14,
+    color: darkMode ? "#fff" : "#666",
+    lineHeight: 20,
+    marginBottom: 15,
+  },
+  testimonyAuthorName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: darkMode ? "#fff" : "#333",
+  },
+  testimonyTime: {
+    fontSize: 12,
+    color: darkMode ? "#ccc" : "#999",
+  },
+  testimonyActionText: {
+    fontSize: 14,
+    color: darkMode ? "#fff" : "#666",
+    marginLeft: 5,
+  },
+});
 
 const styles = StyleSheet.create({
   container: {

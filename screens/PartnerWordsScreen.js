@@ -32,16 +32,34 @@ const ASSET_WALLPAPER_MAP = {
   "bible": require("../assets/open-bible-black-background.jpg"),
 };
 
+const ADMIN_EMAIL = "bophelompopo22@gmail.com";
+
 const PartnerWordsScreen = ({ navigation }) => {
   const [words, setWords] = useState([]);
   const [filter, setFilter] = useState("all"); // "all", "scheduled", "unscheduled"
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedWord, setSelectedWord] = useState(null);
   const [selectedDate, setSelectedDate] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    checkAdminStatus();
     loadWords();
   }, []);
+
+  const checkAdminStatus = async () => {
+    try {
+      const currentUser = await WorkingAuthService.getCurrentUser();
+      if (currentUser && currentUser.email === ADMIN_EMAIL) {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+      }
+    } catch (error) {
+      console.error("Error checking admin status:", error);
+      setIsAdmin(false);
+    }
+  };
 
   const loadWords = async () => {
     try {
@@ -75,6 +93,12 @@ const PartnerWordsScreen = ({ navigation }) => {
   };
 
   const handleScheduleWord = async () => {
+    // Check if user is admin
+    if (!isAdmin) {
+      Alert.alert("Access Denied", "Only the administrator can schedule dates. You can view scheduled dates but cannot change them.");
+      return;
+    }
+
     if (!selectedDate.trim()) {
       Alert.alert("Required", "Please enter a date");
       return;
@@ -336,23 +360,24 @@ const PartnerWordsScreen = ({ navigation }) => {
                   )}
 
                   <View style={styles.wordFooter}>
-                    {!word.isSelected ? (
-                      <TouchableOpacity
-                        style={styles.selectButton}
-                        onPress={() => {
-                          setSelectedWord(word);
-                          setSelectedDate("");
-                          setShowDatePicker(true);
-                        }}
-                      >
-                        <Ionicons name="calendar" size={16} color="#CC6B2E" />
-                        <Text style={styles.selectButtonText}>Schedule</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <TouchableOpacity
-                        style={styles.selectButton}
-                        onPress={() => {
-                          setSelectedWord(word);
+                    {isAdmin ? (
+                      !word.isSelected ? (
+                        <TouchableOpacity
+                          style={styles.selectButton}
+                          onPress={() => {
+                            setSelectedWord(word);
+                            setSelectedDate("");
+                            setShowDatePicker(true);
+                          }}
+                        >
+                          <Ionicons name="calendar" size={16} color="#CC6B2E" />
+                          <Text style={styles.selectButtonText}>Schedule</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity
+                          style={styles.selectButton}
+                          onPress={() => {
+                            setSelectedWord(word);
                           setSelectedDate(word.selectedDate || "");
                           setShowDatePicker(true);
                         }}
@@ -360,6 +385,12 @@ const PartnerWordsScreen = ({ navigation }) => {
                         <Ionicons name="create-outline" size={16} color="#CC6B2E" />
                         <Text style={styles.selectButtonText}>Change Date</Text>
                       </TouchableOpacity>
+                      )
+                    ) : (
+                      <View style={styles.viewOnlyBadge}>
+                        <Ionicons name="eye" size={16} color="#666" />
+                        <Text style={styles.viewOnlyText}>View Only</Text>
+                      </View>
                     )}
                   </View>
                 </View>
@@ -695,6 +726,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#CC6B2E",
     fontWeight: "600",
+  },
+  viewOnlyBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
+  },
+  viewOnlyText: {
+    fontSize: 12,
+    color: "#666",
+    fontStyle: "italic",
   },
   modalOverlay: {
     flex: 1,
