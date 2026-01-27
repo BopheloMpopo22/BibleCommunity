@@ -848,10 +848,9 @@ const CommunityScreen = ({ navigation }) => {
                 loadPosts(); // Refresh posts after deletion
                 Alert.alert("Success", "Post deleted successfully");
               } catch (error) {
-                Alert.alert(
-                  "Error",
-                  "Failed to delete post. Please try again."
-                );
+                // Show more specific error message
+                const errorMessage = error.message || "Failed to delete post. Please try again.";
+                Alert.alert("Error", errorMessage);
               }
             },
           },

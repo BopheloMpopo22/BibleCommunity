@@ -659,10 +659,26 @@ class PostService {
   // Delete a post (author only)
   async deletePost(postId) {
     try {
-      // Remove from Firestore
-      await deleteDoc(doc(db, "posts", postId));
+      // Check if post exists in Firestore before attempting deletion
+      const postRef = doc(db, "posts", postId);
+      
+      // Try to delete from Firestore
+      // If post doesn't exist, Firestore will throw an error, but we'll handle it gracefully
+      try {
+        await deleteDoc(postRef);
+      } catch (firestoreError) {
+        // If post doesn't exist in Firestore (already deleted), that's okay
+        // We'll still remove it from local cache
+        if (firestoreError.code !== 'not-found' && firestoreError.code !== 'permission-denied') {
+          throw firestoreError;
+        }
+        // If it's a permission error, throw it so user knows they can't delete
+        if (firestoreError.code === 'permission-denied') {
+          throw new Error("You don't have permission to delete this post. Only the author can delete their own posts.");
+        }
+      }
 
-      // Remove from local storage cache
+      // Remove from local storage cache (always do this, even if Firestore delete failed)
       const existing = await AsyncStorage.getItem("localPosts");
       if (existing) {
         const arr = JSON.parse(existing).filter((p) => p.id !== postId);
@@ -672,7 +688,22 @@ class PostService {
       return { success: true };
     } catch (error) {
       console.error("Error deleting post:", error);
-      throw new Error("Failed to delete post");
+      // Return more specific error message
+      if (error.message.includes("permission")) {
+        throw error;
+      }
+      throw new Error(error.message || "Failed to delete post");
+    }
+  }
+
+  // Clear all cached posts (useful for debugging/testing)
+  async clearCachedPosts() {
+    try {
+      await AsyncStorage.removeItem("localPosts");
+      return { success: true };
+    } catch (error) {
+      console.error("Error clearing cached posts:", error);
+      throw new Error("Failed to clear cached posts");
     }
   }
 }
