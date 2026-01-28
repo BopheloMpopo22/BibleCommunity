@@ -699,21 +699,27 @@ const CommunityPrayersHubScreen = ({ navigation }) => {
 
       const handleDeletePrayer = async () => {
         try {
-          await PrayerFirebaseService.deletePrayer(item.id);
-          // Update feed data immediately (optimistic update)
+          // Update UI immediately (optimistic update)
           setFeedData((prev) => prev.filter((feedItem) => {
             const feedItemId = feedItem.id || PrayerEngagementService.getPrayerId(feedItem);
             return feedItemId !== item.id;
           }));
-          // Then refresh from server
-          await loadFeedData();
+          
+          // Delete from Firebase (this also clears local cache)
+          await PrayerFirebaseService.deletePrayer(item.id);
+          
+          // Small delay to ensure Firebase deletion completes, then refresh
+          setTimeout(async () => {
+            await loadFeedData();
+          }, 500);
+          
           Alert.alert("Success", "Prayer deleted successfully");
         } catch (error) {
           console.error("Delete prayer error:", error);
+          // Revert optimistic update on error
+          await loadFeedData();
           const errorMessage = error.message || "Failed to delete prayer. Please try again.";
           Alert.alert("Error", errorMessage);
-          // Reload on error to ensure UI is in sync
-          await loadFeedData();
         }
       };
 
@@ -799,21 +805,27 @@ const CommunityPrayersHubScreen = ({ navigation }) => {
               style: "destructive",
               onPress: async () => {
                 try {
-                  await PrayerFirebaseService.deletePrayer(prayer.id);
-                  // Update feed data immediately (optimistic update)
+                  // Update UI immediately (optimistic update)
                   setFeedData((prev) => prev.filter((item) => {
                     const itemId = item.id || PrayerEngagementService.getPrayerId(item);
                     return itemId !== prayer.id;
                   }));
-                  // Then refresh from server
-                  await loadFeedData();
+                  
+                  // Delete from Firebase (this also clears local cache)
+                  await PrayerFirebaseService.deletePrayer(prayer.id);
+                  
+                  // Small delay to ensure Firebase deletion completes, then refresh
+                  setTimeout(async () => {
+                    await loadFeedData();
+                  }, 500);
+                  
                   Alert.alert("Success", "Prayer deleted successfully");
                 } catch (error) {
                   console.error("Delete prayer error:", error);
+                  // Revert optimistic update on error
+                  await loadFeedData();
                   const errorMessage = error.message || "Failed to delete prayer. Please try again.";
                   Alert.alert("Error", errorMessage);
-                  // Reload on error to ensure UI is in sync
-                  await loadFeedData();
                 }
               },
             },
@@ -939,23 +951,28 @@ const CommunityPrayersHubScreen = ({ navigation }) => {
               style: "destructive",
               onPress: async () => {
                 try {
-                  await PrayerFirebaseService.deletePrayerRequest(prayer.id);
-                  // Update feed data immediately (optimistic update)
+                  // Update UI immediately (optimistic update)
                   setFeedData((prev) => prev.filter((item) => {
                     const itemId = item.id || PrayerEngagementService.getPrayerId(item);
                     return itemId !== prayer.id;
                   }));
-                  // Update prayer requests state
                   setPrayerRequests((prev) => prev.filter((r) => r.id !== prayer.id));
-                  // Then refresh from server
-                  await loadFeedData();
+                  
+                  // Delete from Firebase (this also clears local cache)
+                  await PrayerFirebaseService.deletePrayerRequest(prayer.id);
+                  
+                  // Small delay to ensure Firebase deletion completes, then refresh
+                  setTimeout(async () => {
+                    await loadFeedData();
+                  }, 500);
+                  
                   Alert.alert("Success", "Prayer request deleted successfully");
                 } catch (error) {
                   console.error("Delete prayer request error:", error);
+                  // Revert optimistic update on error
+                  await loadFeedData();
                   const errorMessage = error.message || "Failed to delete prayer request. Please try again.";
                   Alert.alert("Error", errorMessage);
-                  // Reload on error to ensure UI is in sync
-                  await loadFeedData();
                 }
               },
             },
