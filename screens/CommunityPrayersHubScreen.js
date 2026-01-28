@@ -700,11 +700,20 @@ const CommunityPrayersHubScreen = ({ navigation }) => {
       const handleDeletePrayer = async () => {
         try {
           await PrayerFirebaseService.deletePrayer(item.id);
-          loadFeedData(); // Refresh feed after deletion
+          // Update feed data immediately (optimistic update)
+          setFeedData((prev) => prev.filter((feedItem) => {
+            const feedItemId = feedItem.id || PrayerEngagementService.getPrayerId(feedItem);
+            return feedItemId !== item.id;
+          }));
+          // Then refresh from server
+          await loadFeedData();
           Alert.alert("Success", "Prayer deleted successfully");
         } catch (error) {
+          console.error("Delete prayer error:", error);
           const errorMessage = error.message || "Failed to delete prayer. Please try again.";
           Alert.alert("Error", errorMessage);
+          // Reload on error to ensure UI is in sync
+          await loadFeedData();
         }
       };
 
@@ -791,11 +800,20 @@ const CommunityPrayersHubScreen = ({ navigation }) => {
               onPress: async () => {
                 try {
                   await PrayerFirebaseService.deletePrayer(prayer.id);
-                  loadFeedData(); // Refresh feed after deletion
+                  // Update feed data immediately (optimistic update)
+                  setFeedData((prev) => prev.filter((item) => {
+                    const itemId = item.id || PrayerEngagementService.getPrayerId(item);
+                    return itemId !== prayer.id;
+                  }));
+                  // Then refresh from server
+                  await loadFeedData();
                   Alert.alert("Success", "Prayer deleted successfully");
                 } catch (error) {
+                  console.error("Delete prayer error:", error);
                   const errorMessage = error.message || "Failed to delete prayer. Please try again.";
                   Alert.alert("Error", errorMessage);
+                  // Reload on error to ensure UI is in sync
+                  await loadFeedData();
                 }
               },
             },
@@ -922,11 +940,22 @@ const CommunityPrayersHubScreen = ({ navigation }) => {
               onPress: async () => {
                 try {
                   await PrayerFirebaseService.deletePrayerRequest(prayer.id);
-                  loadFeedData(); // Refresh feed after deletion
+                  // Update feed data immediately (optimistic update)
+                  setFeedData((prev) => prev.filter((item) => {
+                    const itemId = item.id || PrayerEngagementService.getPrayerId(item);
+                    return itemId !== prayer.id;
+                  }));
+                  // Update prayer requests state
+                  setPrayerRequests((prev) => prev.filter((r) => r.id !== prayer.id));
+                  // Then refresh from server
+                  await loadFeedData();
                   Alert.alert("Success", "Prayer request deleted successfully");
                 } catch (error) {
+                  console.error("Delete prayer request error:", error);
                   const errorMessage = error.message || "Failed to delete prayer request. Please try again.";
                   Alert.alert("Error", errorMessage);
+                  // Reload on error to ensure UI is in sync
+                  await loadFeedData();
                 }
               },
             },
@@ -1005,8 +1034,9 @@ const CommunityPrayersHubScreen = ({ navigation }) => {
 
   const renderEmptyState = (message = "No content yet") => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="heart-outline" size={64} color="#ccc" />
+      <Ionicons name="heart-outline" size={64} color="#999" />
       <Text style={styles.emptyTitle}>{message}</Text>
+      <Text style={styles.emptySubtitle}>Be the first to share a prayer with the community</Text>
     </View>
   );
 
@@ -1853,6 +1883,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#666",
     marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: "#999",
+    textAlign: "center",
+    lineHeight: 20,
   },
   feedCard: {
     backgroundColor: "#fff",
