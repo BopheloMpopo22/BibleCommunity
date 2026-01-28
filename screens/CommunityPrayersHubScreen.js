@@ -25,6 +25,7 @@ import MediaService from "../services/MediaService";
 import MediaPreview from "../components/MediaPreview";
 import MediaPostCard from "../components/MediaPostCard";
 import PrayerEngagementService from "../services/PrayerEngagementService";
+import WorkingAuthService from "../services/WorkingAuthService";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -689,12 +690,23 @@ const CommunityPrayersHubScreen = ({ navigation }) => {
       const postForMediaCard = {
         ...item,
         timeAgo: formatTimestamp(item.timestamp),
-        authorPhoto: null,
-        authorId: null,
+        authorPhoto: item.authorPhoto || null,
+        authorId: item.authorId || item.author_id || null, // Keep actual authorId
         views: 0,
       };
 
       const categoryColor = getCategoryColor(item.category);
+
+      const handleDeletePrayer = async () => {
+        try {
+          await PrayerFirebaseService.deletePrayer(item.id);
+          loadFeedData(); // Refresh feed after deletion
+          Alert.alert("Success", "Prayer deleted successfully");
+        } catch (error) {
+          const errorMessage = error.message || "Failed to delete prayer. Please try again.";
+          Alert.alert("Error", errorMessage);
+        }
+      };
 
       return (
         <View>
@@ -728,6 +740,7 @@ const CommunityPrayersHubScreen = ({ navigation }) => {
             onLike={() => handleLike(item)}
             onComment={() => handleComment(item)}
             onShare={null}
+            onDelete={handleDeletePrayer}
           />
         </View>
       );
@@ -736,122 +749,258 @@ const CommunityPrayersHubScreen = ({ navigation }) => {
     // Regular card for items without media
     const categoryColor = getCategoryColor(item.category);
 
-    return (
-      <View style={styles.feedCard}>
-        {/* Prayer Request Badge */}
-        {isRequest && (
-          <View style={styles.requestBadge}>
-            <Ionicons name="heart-circle" size={16} color="#FF6B6B" />
-            <Text style={styles.requestBadgeText}>Prayer Request</Text>
-          </View>
-        )}
+    // Prayer card with delete functionality component
+    const PrayerCardWithDelete = ({ prayer }) => {
+      const [isAuthor, setIsAuthor] = React.useState(false);
 
-        <View style={styles.feedHeader}>
-          <View style={styles.titleContainer}>
-            <Text style={styles.feedTitle}>{item.title}</Text>
-            {item.category && (
-              <View
-                style={[
-                  styles.categoryBadge,
-                  { backgroundColor: categoryColor },
-                ]}
+      React.useEffect(() => {
+        const checkAuthor = async () => {
+          try {
+            const currentUser = await WorkingAuthService.getCurrentUser();
+            if (!currentUser || !currentUser.uid) {
+              setIsAuthor(false);
+              return;
+            }
+
+            // Check if user is the author - handle both authorId and author_id
+            const prayerAuthorId = prayer.authorId || prayer.author_id;
+            
+            // If prayer has no authorId, allow deletion for authenticated users (legacy/test prayers)
+            const userIsAuthor = prayerAuthorId 
+              ? currentUser.uid === prayerAuthorId 
+              : true; // Allow deletion of prayers without authorId (old test prayers)
+            
+            setIsAuthor(userIsAuthor);
+          } catch (error) {
+            console.error("Error checking author:", error);
+            setIsAuthor(false);
+          }
+        };
+        checkAuthor();
+      }, [prayer.authorId, prayer.author_id]);
+
+      const handleDelete = async () => {
+        Alert.alert(
+          "Delete Prayer",
+          "Are you sure you want to delete this prayer? This action cannot be undone.",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Delete",
+              style: "destructive",
+              onPress: async () => {
+                try {
+                  await PrayerFirebaseService.deletePrayer(prayer.id);
+                  loadFeedData(); // Refresh feed after deletion
+                  Alert.alert("Success", "Prayer deleted successfully");
+                } catch (error) {
+                  const errorMessage = error.message || "Failed to delete prayer. Please try again.";
+                  Alert.alert("Error", errorMessage);
+                }
+              },
+            },
+          ]
+        );
+      };
+
+      return (
+        <View style={styles.feedCard}>
+          {/* Prayer Request Badge */}
+          {isRequest && (
+            <View style={styles.requestBadge}>
+              <Ionicons name="heart-circle" size={16} color="#FF6B6B" />
+              <Text style={styles.requestBadgeText}>Prayer Request</Text>
+            </View>
+          )}
+
+          <View style={styles.feedHeader}>
+            <View style={styles.titleContainer}>
+              <Text style={styles.feedTitle}>{prayer.title}</Text>
+              {prayer.category && (
+                <View
+                  style={[
+                    styles.categoryBadge,
+                    { backgroundColor: categoryColor },
+                  ]}
+                >
+                  <Text style={styles.categoryText}>{prayer.category}</Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.headerRight}>
+              <Text style={styles.timestamp}>{formatTimestamp(prayer.timestamp)}</Text>
+              {/* Three dots menu - only show for author */}
+              {isAuthor && (
+                <TouchableOpacity
+                  style={styles.moreButton}
+                  onPress={handleDelete}
+                >
+                  <Ionicons name="ellipsis-horizontal" size={20} color="#666" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          <Text style={styles.feedContent}>
+            {prayer.body || prayer.content || prayer.prayer}
+          </Text>
+
+          <View style={styles.feedFooter}>
+            <Text style={styles.author}>- {prayer.author || "Anonymous"}</Text>
+
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => handleLike(prayer)}
               >
-                <Text style={styles.categoryText}>{item.category}</Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.timestamp}>{formatTimestamp(item.timestamp)}</Text>
-        </View>
+                <Ionicons 
+                  name={likedPrayers[PrayerEngagementService.getPrayerId(prayer)] ? "heart" : "heart-outline"} 
+                  size={16} 
+                  color={likedPrayers[PrayerEngagementService.getPrayerId(prayer)] ? "#FF6B6B" : "#1a365d"} 
+                />
+                <Text style={styles.actionText}>{prayer.likes || 0}</Text>
+              </TouchableOpacity>
 
-        <Text style={styles.feedContent}>
-          {item.body || item.content || item.prayer}
-        </Text>
-
-        <View style={styles.feedFooter}>
-          <Text style={styles.author}>- {item.author || "Anonymous"}</Text>
-
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => handleLike(item)}
-            >
-              <Ionicons 
-                name={likedPrayers[PrayerEngagementService.getPrayerId(item)] ? "heart" : "heart-outline"} 
-                size={16} 
-                color={likedPrayers[PrayerEngagementService.getPrayerId(item)] ? "#FF6B6B" : "#1a365d"} 
-              />
-              <Text style={styles.actionText}>{item.likes || 0}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => handleComment(item)}
-            >
-              <Ionicons name="chatbubble-outline" size={16} color="#1a365d" />
-              <Text style={styles.actionText}>{item.comments || 0}</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => handleComment(prayer)}
+              >
+                <Ionicons name="chatbubble-outline" size={16} color="#1a365d" />
+                <Text style={styles.actionText}>{prayer.comments || 0}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
-    );
+      );
+    };
+
+    return <PrayerCardWithDelete prayer={item} />;
   };
 
   const renderPrayerRequestItem = ({ item }) => {
     const categoryColor = getCategoryColor(item.category);
 
-    return (
-      <View style={styles.feedCard}>
-        <View style={styles.requestBadge}>
-          <Ionicons name="heart-circle" size={16} color="#FF6B6B" />
-          <Text style={styles.requestBadgeText}>Prayer Request</Text>
-        </View>
+    // Prayer request card with delete functionality
+    const PrayerRequestCardWithDelete = ({ prayer }) => {
+      const [isAuthor, setIsAuthor] = React.useState(false);
 
-        <View style={styles.feedHeader}>
-          <View style={styles.titleContainer}>
-            <Text style={styles.feedTitle}>{item.title}</Text>
-            {item.category && (
-              <View
-                style={[
-                  styles.categoryBadge,
-                  { backgroundColor: categoryColor },
-                ]}
+      React.useEffect(() => {
+        const checkAuthor = async () => {
+          try {
+            const currentUser = await WorkingAuthService.getCurrentUser();
+            if (!currentUser || !currentUser.uid) {
+              setIsAuthor(false);
+              return;
+            }
+
+            // Check if user is the author - handle both authorId and author_id
+            const prayerAuthorId = prayer.authorId || prayer.author_id;
+            
+            // If prayer has no authorId, allow deletion for authenticated users (legacy/test prayers)
+            const userIsAuthor = prayerAuthorId 
+              ? currentUser.uid === prayerAuthorId 
+              : true; // Allow deletion of prayers without authorId (old test prayers)
+            
+            setIsAuthor(userIsAuthor);
+          } catch (error) {
+            console.error("Error checking author:", error);
+            setIsAuthor(false);
+          }
+        };
+        checkAuthor();
+      }, [prayer.authorId, prayer.author_id]);
+
+      const handleDelete = async () => {
+        Alert.alert(
+          "Delete Prayer Request",
+          "Are you sure you want to delete this prayer request? This action cannot be undone.",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Delete",
+              style: "destructive",
+              onPress: async () => {
+                try {
+                  await PrayerFirebaseService.deletePrayerRequest(prayer.id);
+                  loadFeedData(); // Refresh feed after deletion
+                  Alert.alert("Success", "Prayer request deleted successfully");
+                } catch (error) {
+                  const errorMessage = error.message || "Failed to delete prayer request. Please try again.";
+                  Alert.alert("Error", errorMessage);
+                }
+              },
+            },
+          ]
+        );
+      };
+
+      return (
+        <View style={styles.feedCard}>
+          <View style={styles.requestBadge}>
+            <Ionicons name="heart-circle" size={16} color="#FF6B6B" />
+            <Text style={styles.requestBadgeText}>Prayer Request</Text>
+          </View>
+
+          <View style={styles.feedHeader}>
+            <View style={styles.titleContainer}>
+              <Text style={styles.feedTitle}>{prayer.title}</Text>
+              {prayer.category && (
+                <View
+                  style={[
+                    styles.categoryBadge,
+                    { backgroundColor: categoryColor },
+                  ]}
+                >
+                  <Text style={styles.categoryText}>{prayer.category}</Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.headerRight}>
+              <Text style={styles.timestamp}>{formatTimestamp(prayer.timestamp)}</Text>
+              {/* Three dots menu - only show for author */}
+              {isAuthor && (
+                <TouchableOpacity
+                  style={styles.moreButton}
+                  onPress={handleDelete}
+                >
+                  <Ionicons name="ellipsis-horizontal" size={20} color="#666" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          <Text style={styles.feedContent}>{prayer.content}</Text>
+
+          <View style={styles.feedFooter}>
+            <Text style={styles.author}>- {prayer.author || "Anonymous"}</Text>
+
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => handleLike(prayer)}
               >
-                <Text style={styles.categoryText}>{item.category}</Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.timestamp}>{formatTimestamp(item.timestamp)}</Text>
-        </View>
+                <Ionicons 
+                  name={likedPrayers[PrayerEngagementService.getPrayerId(prayer)] ? "heart" : "heart-outline"} 
+                  size={16} 
+                  color={likedPrayers[PrayerEngagementService.getPrayerId(prayer)] ? "#FF6B6B" : "#1a365d"} 
+                />
+                <Text style={styles.actionText}>{prayer.likes || 0}</Text>
+              </TouchableOpacity>
 
-        <Text style={styles.feedContent}>{item.content}</Text>
-
-        <View style={styles.feedFooter}>
-          <Text style={styles.author}>- {item.author || "Anonymous"}</Text>
-
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => handleLike(item)}
-            >
-              <Ionicons 
-                name={likedPrayers[PrayerEngagementService.getPrayerId(item)] ? "heart" : "heart-outline"} 
-                size={16} 
-                color={likedPrayers[PrayerEngagementService.getPrayerId(item)] ? "#FF6B6B" : "#1a365d"} 
-              />
-              <Text style={styles.actionText}>{item.likes || 0}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => handleComment(item)}
-            >
-              <Ionicons name="chatbubble-outline" size={16} color="#1a365d" />
-              <Text style={styles.actionText}>{item.comments || 0}</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => handleComment(prayer)}
+              >
+                <Ionicons name="chatbubble-outline" size={16} color="#1a365d" />
+                <Text style={styles.actionText}>{prayer.comments || 0}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
-    );
+      );
+    };
+
+    return <PrayerRequestCardWithDelete prayer={item} />;
   };
 
   const renderEmptyState = (message = "No content yet") => (
@@ -1740,6 +1889,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 8,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  moreButton: {
+    padding: 4,
+    marginLeft: 8,
   },
   titleContainer: {
     flex: 1,
