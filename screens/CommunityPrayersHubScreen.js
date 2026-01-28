@@ -700,6 +700,8 @@ const CommunityPrayersHubScreen = ({ navigation }) => {
       const handleDeletePrayer = async () => {
         try {
           // Update UI immediately (optimistic update)
+          const previousFeedData = [...feedData];
+          
           setFeedData((prev) => prev.filter((feedItem) => {
             const feedItemId = feedItem.id || PrayerEngagementService.getPrayerId(feedItem);
             return feedItemId !== item.id;
@@ -708,16 +710,21 @@ const CommunityPrayersHubScreen = ({ navigation }) => {
           // Delete from Firebase (this also clears local cache)
           await PrayerFirebaseService.deletePrayer(item.id);
           
-          // Small delay to ensure Firebase deletion completes, then refresh
-          setTimeout(async () => {
-            await loadFeedData();
-          }, 500);
-          
           Alert.alert("Success", "Prayer deleted successfully");
+          
+          // Refresh after a delay to sync with Firebase (silently, no loading spinner)
+          setTimeout(async () => {
+            try {
+              await loadFeedData();
+            } catch (refreshError) {
+              console.warn("Error refreshing after delete:", refreshError);
+              // Don't show error to user - optimistic update already worked
+            }
+          }, 1000);
         } catch (error) {
           console.error("Delete prayer error:", error);
           // Revert optimistic update on error
-          await loadFeedData();
+          setFeedData(previousFeedData);
           const errorMessage = error.message || "Failed to delete prayer. Please try again.";
           Alert.alert("Error", errorMessage);
         }
@@ -952,6 +959,9 @@ const CommunityPrayersHubScreen = ({ navigation }) => {
               onPress: async () => {
                 try {
                   // Update UI immediately (optimistic update)
+                  const previousFeedData = [...feedData];
+                  const previousPrayerRequests = [...prayerRequests];
+                  
                   setFeedData((prev) => prev.filter((item) => {
                     const itemId = item.id || PrayerEngagementService.getPrayerId(item);
                     return itemId !== prayer.id;
@@ -961,16 +971,22 @@ const CommunityPrayersHubScreen = ({ navigation }) => {
                   // Delete from Firebase (this also clears local cache)
                   await PrayerFirebaseService.deletePrayerRequest(prayer.id);
                   
-                  // Small delay to ensure Firebase deletion completes, then refresh
-                  setTimeout(async () => {
-                    await loadFeedData();
-                  }, 500);
-                  
                   Alert.alert("Success", "Prayer request deleted successfully");
+                  
+                  // Refresh after a delay to sync with Firebase (silently, no loading spinner)
+                  setTimeout(async () => {
+                    try {
+                      await loadFeedData();
+                    } catch (refreshError) {
+                      console.warn("Error refreshing after delete:", refreshError);
+                      // Don't show error to user - optimistic update already worked
+                    }
+                  }, 1000);
                 } catch (error) {
                   console.error("Delete prayer request error:", error);
                   // Revert optimistic update on error
-                  await loadFeedData();
+                  setFeedData(previousFeedData);
+                  setPrayerRequests(previousPrayerRequests);
                   const errorMessage = error.message || "Failed to delete prayer request. Please try again.";
                   Alert.alert("Error", errorMessage);
                 }
