@@ -14,7 +14,8 @@ service cloud.firestore {
       allow read: if true;
       allow create: if request.auth != null;
       allow update: if (request.auth != null && (request.resource.data.authorId == request.auth.uid || resource.data.authorId == request.auth.uid)) || (request.resource.data.views == resource.data.views + 1);
-      // Allow deletion if user is author OR if post has no authorId (legacy/test posts)
+      // Only the author can delete their own posts
+      // Exception: Posts without authorId (legacy/test posts) can be deleted by any authenticated user for cleanup
       allow delete: if request.auth != null && (resource.data.authorId == request.auth.uid || !resource.data.authorId);
     }
     
