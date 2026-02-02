@@ -22,9 +22,9 @@ import WorkingAuthService from "../services/WorkingAuthService";
 
 // Available images from assets
 const ASSET_IMAGES = [
-  { id: "field-1920", name: "Field", file: require("../assets/field-3629120_1920.jpg") },
+  { id: "field-1920", name: "Field", file: require("../assets/field-3629120_640.jpg") },
   { id: "field-640", name: "Field (Small)", file: require("../assets/field-3629120_640.jpg") },
-  { id: "sea-1920", name: "Sea", file: require("../assets/sea-4242303_1920.jpg") },
+  { id: "sea-1920", name: "Sea", file: require("../assets/sea-4242303_640.jpg") },
   { id: "sea-640", name: "Sea (Small)", file: require("../assets/sea-4242303_640.jpg") },
   { id: "joy", name: "Joy", file: require("../assets/Joy Photo.jpg") },
   { id: "hope", name: "Hope", file: require("../assets/Hope Photo.jpg") },

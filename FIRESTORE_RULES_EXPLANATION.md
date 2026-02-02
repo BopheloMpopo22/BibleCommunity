@@ -93,3 +93,5 @@ But the current rules are **secure for production** as-is, since:
 
 **Your Firestore rules are secure!** Only authors can delete their own content. The exception for posts without `authorId` is just for cleaning up old test data and doesn't affect the security of real content.
 
+
+

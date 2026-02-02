@@ -20,7 +20,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.biblecommunity.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -28,6 +29,11 @@
     "plugins": [
       "expo-sqlite",
       "expo-video"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "3f971df9-a98c-4555-ab82-de583783d11a"
+      }
+    }
   }
 }

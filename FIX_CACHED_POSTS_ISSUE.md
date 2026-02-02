@@ -83,3 +83,5 @@ I've updated the `deletePost` function to:
 
 After clearing the cache, your app will be clean and ready. The collection will automatically reappear when you create your first new post!
 
+
+

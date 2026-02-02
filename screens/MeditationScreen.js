@@ -73,7 +73,7 @@ const meditationCategories = [
     title: "Love",
     color: "#FF6B6B",
     icon: "heart",
-    image: require("../assets/field-3629120_1920.jpg"), // Using field image for love (warm, open)
+    image: require("../assets/field-3629120_640.jpg"), // Using field image for love (warm, open)
     categoryImage: require("../assets/field-3629120_640.jpg"),
     scriptures: [
       {
@@ -99,7 +99,7 @@ const meditationCategories = [
     title: "Peace",
     color: "#4ECDC4",
     icon: "leaf",
-    image: require("../assets/sea-4242303_1920.jpg"), // Using sea image for peace (calm water)
+    image: require("../assets/sea-4242303_640.jpg"), // Using sea image for peace (calm water)
     categoryImage: require("../assets/Peace photo.jpg"),
     scriptures: [
       {
@@ -297,9 +297,9 @@ const MeditationScreen = ({ navigation }) => {
 
   // Asset image mapping - maps asset IDs to require() references
   const ASSET_IMAGE_MAP = {
-    "field-1920": require("../assets/field-3629120_1920.jpg"),
+    "field-1920": require("../assets/field-3629120_640.jpg"),
     "field-640": require("../assets/field-3629120_640.jpg"),
-    "sea-1920": require("../assets/sea-4242303_1920.jpg"),
+    "sea-1920": require("../assets/sea-4242303_640.jpg"),
     "sea-640": require("../assets/sea-4242303_640.jpg"),
     "joy": require("../assets/Joy Photo.jpg"),
     "hope": require("../assets/Hope Photo.jpg"),
