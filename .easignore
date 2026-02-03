@@ -75,8 +75,8 @@ Thumbs.db
 # Scripts (if not needed for build)
 scripts/
 
-# Data files (if large and not needed)
-data/
+# Data files - KEEP THIS (app imports from data/ folder)
+# data/ - REMOVED - app needs curatedBookCategories.js and curatedChristianBooks.js
 
 # Large media files that should be in Firebase Storage
 # (Keep only essential assets in assets/ folder)
