@@ -19,12 +19,13 @@ import * as ImagePicker from "expo-image-picker";
 import MediaService from "../services/MediaService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import WorkingAuthService from "../services/WorkingAuthService";
+import { MEDITATION_MUSIC_CATALOG } from "../services/MeditationMusicService";
 
 // Available images from assets
 const ASSET_IMAGES = [
-  { id: "field-1920", name: "Field", file: require("../assets/field-3629120_640.jpg") },
+  { id: "field-1920", name: "Field", file: require("../assets/field-3629120_1920.jpg") },
   { id: "field-640", name: "Field (Small)", file: require("../assets/field-3629120_640.jpg") },
-  { id: "sea-1920", name: "Sea", file: require("../assets/sea-4242303_640.jpg") },
+  { id: "sea-1920", name: "Sea", file: require("../assets/sea-4242303_1920.jpg") },
   { id: "sea-640", name: "Sea (Small)", file: require("../assets/sea-4242303_640.jpg") },
   { id: "joy", name: "Joy", file: require("../assets/Joy Photo.jpg") },
   { id: "hope", name: "Hope", file: require("../assets/Hope Photo.jpg") },
@@ -36,14 +37,9 @@ const ASSET_IMAGES = [
   { id: "background", name: "Meditation Background", file: require("../assets/Background of meditaton screen..jpg") },
 ];
 
-// Available music from assets
-const ASSET_MUSIC = [
-  { id: "zen-wind", name: "Zen Wind", file: require("../assets/zen-wind-411951.mp3") },
-  { id: "heavenly-energy", name: "Heavenly Energy", file: require("../assets/heavenly-energy-188908.mp3") },
-  { id: "inner-peace", name: "Inner Peace", file: require("../assets/inner-peace-339640.mp3") },
-  { id: "prayer-meditation", name: "Prayer Meditation", file: require("../assets/prayer-meditation-piano-holy-grace-heavenly-celestial-music-393549.mp3") },
-  { id: "worship-piano", name: "Worship Piano", file: require("../assets/worship-piano-instrumental-peaceful-prayer-music-223373.mp3") },
-];
+// Built-in music is loaded from Firebase Storage at runtime (NOT bundled in the app)
+// to keep the Play Store compressed download size under 200MB.
+const BUILT_IN_MUSIC = MEDITATION_MUSIC_CATALOG;
 
 // Suggested themes
 const SUGGESTED_THEMES = [
@@ -172,8 +168,12 @@ const CreateMeditationScreen = ({ navigation }) => {
     }
   };
 
-  const selectMusicFromAssets = (music) => {
-    setSelectedMusic({ type: "asset", id: music.id, file: music.file });
+  const selectMusicFromBuiltIn = (music) => {
+    setSelectedMusic({
+      type: "remote",
+      id: music.id,
+      storagePath: music.storagePath,
+    });
     setShowMusicPicker(false);
   };
 
@@ -615,8 +615,8 @@ const CreateMeditationScreen = ({ navigation }) => {
               <View style={styles.musicSelectedContainer}>
                 <Ionicons name="musical-notes" size={24} color="#1a365d" />
                 <Text style={styles.musicSelectedText}>
-                  {selectedMusic.type === "asset"
-                    ? ASSET_MUSIC.find((m) => m.id === selectedMusic.id)?.name
+                  {selectedMusic.type === "remote"
+                    ? BUILT_IN_MUSIC.find((m) => m.id === selectedMusic.id)?.name
                     : "Custom Music"}
                 </Text>
                 <TouchableOpacity onPress={removeMusic}>
@@ -720,12 +720,12 @@ const CreateMeditationScreen = ({ navigation }) => {
                 </TouchableOpacity>
               </View>
               <ScrollView>
-                <Text style={styles.modalSectionTitle}>From Assets</Text>
-                {ASSET_MUSIC.map((music) => (
+                <Text style={styles.modalSectionTitle}>Built-in Music</Text>
+                {BUILT_IN_MUSIC.map((music) => (
                   <TouchableOpacity
                     key={music.id}
                     style={styles.musicOption}
-                    onPress={() => selectMusicFromAssets(music)}
+                    onPress={() => selectMusicFromBuiltIn(music)}
                   >
                     <Ionicons name="musical-notes" size={24} color="#1a365d" />
                     <Text style={styles.musicOptionText}>{music.name}</Text>

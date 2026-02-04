@@ -18,53 +18,18 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import VoiceService from "../services/VoiceService";
 import { useFocusEffect } from "@react-navigation/native";
 import AssetPreloadService from "../services/AssetPreloadService";
+import MeditationMusicService, {
+  MEDITATION_MUSIC_CATALOG,
+} from "../services/MeditationMusicService";
 
 const { width, height } = Dimensions.get("window");
 
 // Session length options (in minutes)
 const SESSION_LENGTHS = [5, 10, 15, 20, 30];
 
-// Music options for meditation
-// Note: All music files must exist in assets folder
-const MEDITATION_MUSIC = [
-  {
-    id: "zen-wind",
-    name: "Zen Wind",
-    description: "Peaceful ambient sounds",
-    file: require("../assets/zen-wind-411951.mp3"),
-  },
-  {
-    id: "heavenly-energy",
-    name: "Heavenly Energy",
-    description: "Uplifting celestial music",
-    file: require("../assets/heavenly-energy-188908.mp3"),
-  },
-  {
-    id: "inner-peace",
-    name: "Inner Peace",
-    description: "Calming meditation music",
-    file: require("../assets/inner-peace-339640.mp3"),
-  },
-  {
-    id: "prayer-meditation",
-    name: "Prayer Meditation",
-    description: "Holy grace piano music",
-    file: require("../assets/prayer-meditation-piano-holy-grace-heavenly-celestial-music-393549.mp3"),
-  },
-  {
-    id: "worship-piano",
-    name: "Worship Piano",
-    description: "Peaceful prayer instrumental",
-    file: require("../assets/worship-piano-instrumental-peaceful-prayer-music-223373.mp3"),
-  },
-];
-
-// Log music files on load to verify they exist
-console.log("Meditation Music Files:", MEDITATION_MUSIC.map(m => ({
-  name: m.name,
-  hasFile: !!m.file,
-  fileType: typeof m.file
-})));
+// Built-in music is loaded from Firebase Storage at runtime (NOT bundled),
+// to keep the Play Store compressed download size under 200MB.
+const MEDITATION_MUSIC = MEDITATION_MUSIC_CATALOG;
 
 // Meditation categories - ONE image per category (no transitions)
 const meditationCategories = [
@@ -73,7 +38,7 @@ const meditationCategories = [
     title: "Love",
     color: "#FF6B6B",
     icon: "heart",
-    image: require("../assets/field-3629120_640.jpg"), // Using field image for love (warm, open)
+    image: require("../assets/field-3629120_1920.jpg"), // Using field image for love (warm, open)
     categoryImage: require("../assets/field-3629120_640.jpg"),
     scriptures: [
       {
@@ -99,7 +64,7 @@ const meditationCategories = [
     title: "Peace",
     color: "#4ECDC4",
     icon: "leaf",
-    image: require("../assets/sea-4242303_640.jpg"), // Using sea image for peace (calm water)
+    image: require("../assets/sea-4242303_1920.jpg"), // Using sea image for peace (calm water)
     categoryImage: require("../assets/Peace photo.jpg"),
     scriptures: [
       {
@@ -226,6 +191,10 @@ const MeditationScreen = ({ navigation }) => {
   const [showVoiceSelector, setShowVoiceSelector] = useState(false);
   const [selectedMusic, setSelectedMusic] = useState(null);
   const [showMusicSelector, setShowMusicSelector] = useState(false);
+  const [musicOptions, setMusicOptions] = useState(
+    MEDITATION_MUSIC.map((t) => ({ ...t, uri: null }))
+  );
+  const [musicOptionsLoading, setMusicOptionsLoading] = useState(true);
   const [progress, setProgress] = useState(0); // Progress for progress bar (0-1)
   const [userMeditations, setUserMeditations] = useState([]); // User-created meditations
   const [allCategories, setAllCategories] = useState(meditationCategories); // Combined default + user meditations
@@ -297,9 +266,9 @@ const MeditationScreen = ({ navigation }) => {
 
   // Asset image mapping - maps asset IDs to require() references
   const ASSET_IMAGE_MAP = {
-    "field-1920": require("../assets/field-3629120_640.jpg"),
+    "field-1920": require("../assets/field-3629120_1920.jpg"),
     "field-640": require("../assets/field-3629120_640.jpg"),
-    "sea-1920": require("../assets/sea-4242303_640.jpg"),
+    "sea-1920": require("../assets/sea-4242303_1920.jpg"),
     "sea-640": require("../assets/sea-4242303_640.jpg"),
     "joy": require("../assets/Joy Photo.jpg"),
     "hope": require("../assets/Hope Photo.jpg"),
@@ -418,11 +387,24 @@ const MeditationScreen = ({ navigation }) => {
     loadFavorites();
     loadProgress();
     loadUserMeditations(); // Load user meditations
-    // Set default music (first available)
-    const defaultMusic = MEDITATION_MUSIC.find((m) => m.file !== null);
-    if (defaultMusic) {
-      setSelectedMusic(defaultMusic.id);
-    }
+    // Load built-in music URLs from Firebase Storage (not bundled in the app)
+    (async () => {
+      try {
+        setMusicOptionsLoading(true);
+        const tracks = await MeditationMusicService.getTracksWithUrls();
+        setMusicOptions(tracks);
+
+        // Set default music (first available with a valid URL)
+        const defaultMusic = tracks.find((m) => !!m.uri) || tracks[0];
+        if (defaultMusic?.id) {
+          setSelectedMusic(defaultMusic.id);
+        }
+      } catch (e) {
+        console.warn("[MeditationScreen] Failed to load music URLs:", e?.message || e);
+      } finally {
+        setMusicOptionsLoading(false);
+      }
+    })();
     
     // Configure audio mode for background playback
     Audio.setAudioModeAsync({
@@ -672,25 +654,28 @@ const MeditationScreen = ({ navigation }) => {
     setShowCompletion(false);
     
     // Preload music for this category so it's ready when play is pressed
-    // Determine music source
+    // Determine music source (remote Firebase Storage URL OR phone-picked audio)
     let musicSource = null;
+
+    const getRemoteSourceById = (trackId) => {
+      const opt = musicOptions.find((m) => m.id === trackId);
+      if (opt?.uri) return { uri: opt.uri };
+      return null;
+    };
+
     if (category && category.isUserCreated && category.music) {
       // User-created meditation music
-      if (category.music.type === "asset") {
-        const assetId = category.music.id;
-        const musicOption = MEDITATION_MUSIC.find((m) => m.id === assetId);
-        if (musicOption && musicOption.file) {
-          musicSource = musicOption.file;
-        }
+      if (category.music.type === "remote") {
+        musicSource = getRemoteSourceById(category.music.id);
+      } else if (category.music.type === "asset") {
+        // Backwards-compat: older saved meditations might have used "asset"
+        musicSource = getRemoteSourceById(category.music.id);
       } else if (category.music.type === "phone") {
         musicSource = { uri: category.music.uri };
       }
     } else if (selectedMusic) {
       // Default meditation music
-      const musicOption = MEDITATION_MUSIC.find((m) => m.id === selectedMusic);
-      if (musicOption && musicOption.file) {
-        musicSource = musicOption.file;
-      }
+      musicSource = getRemoteSourceById(selectedMusic);
     }
     
     // Preload music in background (don't block UI)
@@ -782,25 +767,28 @@ const MeditationScreen = ({ navigation }) => {
       // Start music and speech in PARALLEL (not sequential) to avoid delay
       // Determine music source - check for user-created meditation music first
       let musicSource = null;
+
+      const getRemoteSourceById = (trackId) => {
+        const opt = musicOptions.find((m) => m.id === trackId);
+        if (opt?.uri) return { uri: opt.uri };
+        return null;
+      };
+
       if (selectedCategory && selectedCategory.isUserCreated && selectedCategory.music) {
         // User-created meditation music
-        if (selectedCategory.music.type === "asset") {
-          // Asset music from user meditation - find in MEDITATION_MUSIC
-          const assetId = selectedCategory.music.id;
-          const musicOption = MEDITATION_MUSIC.find((m) => m.id === assetId);
-          if (musicOption && musicOption.file) {
-            musicSource = musicOption.file;
-          }
+        if (
+          selectedCategory.music.type === "remote" ||
+          selectedCategory.music.type === "asset"
+        ) {
+          // Backwards-compat: treat old "asset" as remote-by-id
+          musicSource = getRemoteSourceById(selectedCategory.music.id);
         } else if (selectedCategory.music.type === "phone") {
           // Phone music from user meditation
           musicSource = { uri: selectedCategory.music.uri };
         }
       } else if (selectedMusic) {
         // Default meditation music
-        const musicOption = MEDITATION_MUSIC.find((m) => m.id === selectedMusic);
-        if (musicOption && musicOption.file) {
-          musicSource = musicOption.file;
-        }
+        musicSource = getRemoteSourceById(selectedMusic);
       }
 
       // Use preloaded music if available, otherwise load it
@@ -941,12 +929,12 @@ const MeditationScreen = ({ navigation }) => {
     setShowMusicSelector(false);
     
     // Pre-load the new music so it's ready to play immediately (no delay when pressing play)
-    const musicOption = MEDITATION_MUSIC.find((m) => m.id === musicId);
-    if (musicOption && musicOption.file) {
+    const musicOption = musicOptions.find((m) => m.id === musicId);
+    if (musicOption && musicOption.uri) {
       try {
         // Pre-load music (but don't play yet) - this happens in background
         Audio.Sound.createAsync(
-          musicOption.file,
+          { uri: musicOption.uri },
           { shouldPlay: false, isLooping: true, volume: 0.3 }
         ).then(({ sound }) => {
           // Store it but don't set as playing yet
@@ -996,24 +984,25 @@ const MeditationScreen = ({ navigation }) => {
           return;
         }
 
-        // Check if it's a user-created meditation with custom music
+        // Determine the music source (remote URL or phone audio)
         let musicSource = null;
+        const getRemoteSourceById = (trackId) => {
+          const opt = musicOptions.find((m) => m.id === trackId);
+          if (opt?.uri) return { uri: opt.uri };
+          return null;
+        };
+
         if (selectedCategory && selectedCategory.isUserCreated && selectedCategory.music) {
-          // User-created meditation music
-          if (selectedCategory.music.type === "asset") {
-            // Asset music from user meditation
-            const assetId = selectedCategory.music.id;
-            musicSource = ASSET_IMAGE_MAP[assetId] || null; // We'll need to create a music map
+          if (
+            selectedCategory.music.type === "remote" ||
+            selectedCategory.music.type === "asset"
+          ) {
+            musicSource = getRemoteSourceById(selectedCategory.music.id);
           } else if (selectedCategory.music.type === "phone") {
-            // Phone music from user meditation
             musicSource = { uri: selectedCategory.music.uri };
           }
         } else {
-          // Default meditation music
-          const musicOption = MEDITATION_MUSIC.find((m) => m.id === selectedMusic);
-          if (musicOption && musicOption.file) {
-            musicSource = musicOption.file;
-          }
+          musicSource = getRemoteSourceById(selectedMusic);
         }
 
         if (!musicSource) {
@@ -1279,31 +1268,31 @@ const MeditationScreen = ({ navigation }) => {
                 </View>
 
                 <ScrollView style={styles.voiceList}>
-                  {MEDITATION_MUSIC.map((music) => (
+                  {musicOptions.map((music) => (
                     <TouchableOpacity
                       key={music.id}
                       style={[
                         styles.voiceOption,
                         selectedMusic === music.id && styles.selectedVoiceOption,
-                        !music.file && styles.disabledOption,
+                        !music.uri && styles.disabledOption,
                       ]}
                       onPress={() => {
-                        if (music.file) {
+                        if (music.uri) {
                           handleMusicSelect(music.id);
                         }
                       }}
-                      disabled={!music.file}
+                      disabled={!music.uri}
                     >
                       <View style={styles.voiceOptionContent}>
-                        <Text style={[styles.voiceName, !music.file && styles.disabledText]}>
+                        <Text style={[styles.voiceName, !music.uri && styles.disabledText]}>
                           {music.name}
                         </Text>
-                        <Text style={[styles.voiceLanguage, !music.file && styles.disabledText]}>
+                        <Text style={[styles.voiceLanguage, !music.uri && styles.disabledText]}>
                           {music.description}
-                          {!music.file && " (Coming soon)"}
+                          {!music.uri && " (Unavailable)"}
                         </Text>
                       </View>
-                      {selectedMusic === music.id && music.file && (
+                      {selectedMusic === music.id && music.uri && (
                         <Ionicons name="checkmark-circle" size={24} color="#4ECDC4" />
                       )}
                     </TouchableOpacity>

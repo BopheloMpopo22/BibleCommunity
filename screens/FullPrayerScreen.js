@@ -193,8 +193,17 @@ export default function FullPrayerScreen({ route, navigation }) {
   // Load background music
   const loadBackgroundMusic = async () => {
     try {
+      // Load from Firebase Storage (NOT bundled) to keep Play Store download size small
+      const MeditationMusicService = (
+        await import("../services/MeditationMusicService")
+      ).default;
+      const uri = await MeditationMusicService.getTrackUrlById("zen-wind");
+      if (!uri) {
+        console.warn("Background music URL not available");
+        return;
+      }
       const { sound } = await Audio.Sound.createAsync(
-        require("../assets/zen-wind-411951.mp3"),
+        { uri },
         {
           shouldPlay: false,
           isLooping: true,
