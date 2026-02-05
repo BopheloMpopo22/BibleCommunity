@@ -30,7 +30,54 @@ class TimeBasedPrayerService {
     const timeOfDay = this.getCurrentTimeOfDay();
     console.log(`📖 Getting ${timeOfDay} prayer`);
 
-    // Check for partner prayers first (LOCAL FIRST for instant display)
+    // Check Firebase FIRST for synced content across devices
+    try {
+      const PartnerFirebaseService = (await import("./PartnerFirebaseService")).default;
+      const partnerPrayers = await PartnerFirebaseService.getAllPartnerPrayers();
+      
+      if (partnerPrayers && partnerPrayers.length > 0) {
+        const today = new Date().toDateString();
+        const selectedPrayer = partnerPrayers.find(
+          (prayer) =>
+            prayer.time === timeOfDay &&
+            prayer.isSelected === true &&
+            prayer.selectedDate &&
+            (new Date(prayer.selectedDate).toDateString() === today ||
+             prayer.selectedDate === today ||
+             prayer.selectedDate.includes(today.split(" ")[1]))
+        );
+        
+        if (selectedPrayer) {
+          console.log(`✅ Using partner prayer from ${selectedPrayer.author} (Firebase)`);
+          // Also save to local cache for offline access
+          try {
+            const AsyncStorage = require("@react-native-async-storage/async-storage").default;
+            const localPrayers = partnerPrayers.filter(p => p.time === timeOfDay);
+            await AsyncStorage.setItem("partner_prayers", JSON.stringify(localPrayers));
+          } catch (e) {
+            console.log("Error caching to local:", e);
+          }
+          
+          return {
+            title: `${timeOfDay.charAt(0).toUpperCase() + timeOfDay.slice(1)} Prayer`,
+            scripture: "",
+            scriptureText: "",
+            prayer: selectedPrayer.prayer,
+            theme: "Partner Prayer",
+            wallpaper: selectedPrayer.wallpaper || null,
+            textColor: selectedPrayer.textColor || "black",
+            timeLabel: `Good ${timeOfDay.charAt(0).toUpperCase() + timeOfDay.slice(1)}`,
+            video: selectedPrayer.video || null,
+            author: selectedPrayer.author,
+            isPartnerPrayer: true,
+          };
+        }
+      }
+    } catch (error) {
+      console.log("Error checking Firebase partner prayers:", error);
+    }
+
+    // Fallback to local storage if Firebase fails
     try {
       const AsyncStorage = require("@react-native-async-storage/async-storage").default;
       const partnerPrayersJson = await AsyncStorage.getItem("partner_prayers");
@@ -39,7 +86,6 @@ class TimeBasedPrayerService {
         const partnerPrayers = JSON.parse(partnerPrayersJson);
         const today = new Date().toDateString();
         
-        // Find a partner prayer selected for today and this time
         const selectedPrayer = partnerPrayers.find(
           (prayer) =>
             prayer.time === timeOfDay &&
@@ -47,19 +93,19 @@ class TimeBasedPrayerService {
             prayer.selectedDate &&
             (new Date(prayer.selectedDate).toDateString() === today ||
              prayer.selectedDate === today ||
-             prayer.selectedDate.includes(today.split(" ")[1])) // Match month/day
+             prayer.selectedDate.includes(today.split(" ")[1]))
         );
 
         if (selectedPrayer) {
-          console.log(`✅ Using partner prayer from ${selectedPrayer.author} (local)`);
+          console.log(`✅ Using partner prayer from ${selectedPrayer.author} (local fallback)`);
           return {
             title: `${timeOfDay.charAt(0).toUpperCase() + timeOfDay.slice(1)} Prayer`,
             scripture: "",
             scriptureText: "",
             prayer: selectedPrayer.prayer,
             theme: "Partner Prayer",
-            wallpaper: selectedPrayer.wallpaper || null, // Partner's wallpaper
-            textColor: selectedPrayer.textColor || "black", // Partner's text color
+            wallpaper: selectedPrayer.wallpaper || null,
+            textColor: selectedPrayer.textColor || "black",
             timeLabel: `Good ${timeOfDay.charAt(0).toUpperCase() + timeOfDay.slice(1)}`,
             video: selectedPrayer.video || null,
             author: selectedPrayer.author,
@@ -69,31 +115,6 @@ class TimeBasedPrayerService {
       }
     } catch (error) {
       console.log("Error checking local partner prayers:", error);
-    }
-
-    // Try Firebase in background (non-blocking)
-    try {
-      const PartnerFirebaseService = (await import("./PartnerFirebaseService")).default;
-      PartnerFirebaseService.getAllPartnerPrayers().then((partnerPrayers) => {
-        if (partnerPrayers && partnerPrayers.length > 0) {
-          const today = new Date().toDateString();
-          const selectedPrayer = partnerPrayers.find(
-            (prayer) =>
-              prayer.time === timeOfDay &&
-              prayer.isSelected === true &&
-              prayer.selectedDate &&
-              (new Date(prayer.selectedDate).toDateString() === today ||
-               prayer.selectedDate === today ||
-               prayer.selectedDate.includes(today.split(" ")[1]))
-          );
-          if (selectedPrayer) {
-            console.log(`✅ Updated with Firebase partner prayer from ${selectedPrayer.author}`);
-            // Note: This won't update the UI automatically, but ensures data is synced
-          }
-        }
-      }).catch(err => console.log("Background Firebase sync error:", err));
-    } catch (error) {
-      console.log("Error checking Firebase partner prayers (non-blocking):", error);
     }
 
     // Default prayers if no partner prayer is selected
@@ -193,7 +214,50 @@ class TimeBasedPrayerService {
     const timeOfDay = this.getCurrentTimeOfDay();
     console.log(`📖 Getting ${timeOfDay} scripture`);
 
-    // Check for partner scriptures first (LOCAL FIRST for instant display)
+    // Check Firebase FIRST for synced content across devices
+    try {
+      const PartnerFirebaseService = (await import("./PartnerFirebaseService")).default;
+      const partnerScriptures = await PartnerFirebaseService.getAllPartnerScriptures();
+      
+      if (partnerScriptures && partnerScriptures.length > 0) {
+        const today = new Date().toDateString();
+        const selectedScripture = partnerScriptures.find(
+          (scripture) =>
+            scripture.time === timeOfDay &&
+            scripture.isSelected === true &&
+            scripture.selectedDate &&
+            (new Date(scripture.selectedDate).toDateString() === today ||
+             scripture.selectedDate === today ||
+             scripture.selectedDate.includes(today.split(" ")[1]))
+        );
+        
+        if (selectedScripture) {
+          console.log(`✅ Using partner scripture from ${selectedScripture.author} (Firebase)`);
+          // Also save to local cache for offline access
+          try {
+            const AsyncStorage = require("@react-native-async-storage/async-storage").default;
+            const localScriptures = partnerScriptures.filter(s => s.time === timeOfDay);
+            await AsyncStorage.setItem("partner_scriptures", JSON.stringify(localScriptures));
+          } catch (e) {
+            console.log("Error caching to local:", e);
+          }
+          
+          return {
+            reference: selectedScripture.reference,
+            text: selectedScripture.text,
+            wallpaper: selectedScripture.wallpaper || null,
+            textColor: selectedScripture.textColor || "black",
+            video: selectedScripture.video || null,
+            author: selectedScripture.author,
+            isPartnerScripture: true,
+          };
+        }
+      }
+    } catch (error) {
+      console.log("Error checking Firebase partner scriptures:", error);
+    }
+
+    // Fallback to local storage if Firebase fails
     try {
       const AsyncStorage = require("@react-native-async-storage/async-storage").default;
       const partnerScripturesJson = await AsyncStorage.getItem("partner_scriptures");
@@ -202,7 +266,6 @@ class TimeBasedPrayerService {
         const partnerScriptures = JSON.parse(partnerScripturesJson);
         const today = new Date().toDateString();
         
-        // Find a partner scripture selected for today and this time
         const selectedScripture = partnerScriptures.find(
           (scripture) =>
             scripture.time === timeOfDay &&
@@ -210,11 +273,11 @@ class TimeBasedPrayerService {
             scripture.selectedDate &&
             (new Date(scripture.selectedDate).toDateString() === today ||
              scripture.selectedDate === today ||
-             scripture.selectedDate.includes(today.split(" ")[1])) // Match month/day
+             scripture.selectedDate.includes(today.split(" ")[1]))
         );
 
         if (selectedScripture) {
-          console.log(`✅ Using partner scripture from ${selectedScripture.author} (local)`);
+          console.log(`✅ Using partner scripture from ${selectedScripture.author} (local fallback)`);
           return {
             reference: selectedScripture.reference,
             text: selectedScripture.text,
@@ -228,30 +291,6 @@ class TimeBasedPrayerService {
       }
     } catch (error) {
       console.log("Error checking local partner scriptures:", error);
-    }
-
-    // Try Firebase in background (non-blocking)
-    try {
-      const PartnerFirebaseService = (await import("./PartnerFirebaseService")).default;
-      PartnerFirebaseService.getAllPartnerScriptures().then((partnerScriptures) => {
-        if (partnerScriptures && partnerScriptures.length > 0) {
-          const today = new Date().toDateString();
-          const selectedScripture = partnerScriptures.find(
-            (scripture) =>
-              scripture.time === timeOfDay &&
-              scripture.isSelected === true &&
-              scripture.selectedDate &&
-              (new Date(scripture.selectedDate).toDateString() === today ||
-               scripture.selectedDate === today ||
-               scripture.selectedDate.includes(today.split(" ")[1]))
-          );
-          if (selectedScripture) {
-            console.log(`✅ Updated with Firebase partner scripture from ${selectedScripture.author}`);
-          }
-        }
-      }).catch(err => console.log("Background Firebase sync error:", err));
-    } catch (error) {
-      console.log("Error checking Firebase partner scriptures (non-blocking):", error);
     }
 
     // Default scriptures if no partner scripture is selected
@@ -276,16 +315,58 @@ class TimeBasedPrayerService {
   static async getTimeBasedWord() {
     console.log(`📖 Getting word of the day`);
 
-    // Check for partner words first (LOCAL FIRST for instant display)
+    // Check Firebase FIRST for synced content across devices
+    try {
+      const PartnerFirebaseService = (await import("./PartnerFirebaseService")).default;
+      const partnerWords = await PartnerFirebaseService.getAllPartnerWords();
+      
+      if (partnerWords && partnerWords.length > 0) {
+        const today = new Date().toISOString().split("T")[0];
+        const selectedWord = partnerWords.find(
+          (word) =>
+            word.isSelected === true &&
+            word.selectedDate &&
+            (word.selectedDate === today ||
+             new Date(word.selectedDate).toISOString().split("T")[0] === today)
+        );
+        
+        if (selectedWord) {
+          console.log(`✅ Using partner word from ${selectedWord.author} (Firebase)`);
+          // Also save to local cache for offline access
+          try {
+            const AsyncStorage = require("@react-native-async-storage/async-storage").default;
+            await AsyncStorage.setItem("partner_words", JSON.stringify(partnerWords));
+          } catch (e) {
+            console.log("Error caching to local:", e);
+          }
+          
+          return {
+            word: selectedWord.title || "Word of the Day",
+            definition: selectedWord.text || "",
+            verse: selectedWord.scriptureText || "",
+            reference: selectedWord.scriptureReference || "",
+            reflection: selectedWord.summary || "",
+            wallpaper: selectedWord.wallpaper || null,
+            textColor: selectedWord.textColor || "black",
+            video: selectedWord.video || null,
+            author: selectedWord.author,
+            isPartnerWord: true,
+          };
+        }
+      }
+    } catch (error) {
+      console.log("Error checking Firebase partner words:", error);
+    }
+
+    // Fallback to local storage if Firebase fails
     try {
       const AsyncStorage = require("@react-native-async-storage/async-storage").default;
       const partnerWordsJson = await AsyncStorage.getItem("partner_words");
       
       if (partnerWordsJson) {
         const partnerWords = JSON.parse(partnerWordsJson);
-        const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
+        const today = new Date().toISOString().split("T")[0];
         
-        // Find a partner word selected for today
         const selectedWord = partnerWords.find(
           (word) =>
             word.isSelected === true &&
@@ -295,7 +376,7 @@ class TimeBasedPrayerService {
         );
 
         if (selectedWord) {
-          console.log(`✅ Using partner word from ${selectedWord.author} (local)`);
+          console.log(`✅ Using partner word from ${selectedWord.author} (local fallback)`);
           return {
             word: selectedWord.title || "Word of the Day",
             definition: selectedWord.text || "",
@@ -312,28 +393,6 @@ class TimeBasedPrayerService {
       }
     } catch (error) {
       console.log("Error checking local partner words:", error);
-    }
-
-    // Try Firebase in background (non-blocking)
-    try {
-      const PartnerFirebaseService = (await import("./PartnerFirebaseService")).default;
-      PartnerFirebaseService.getAllPartnerWords().then((partnerWords) => {
-        if (partnerWords && partnerWords.length > 0) {
-          const today = new Date().toISOString().split("T")[0];
-          const selectedWord = partnerWords.find(
-            (word) =>
-              word.isSelected === true &&
-              word.selectedDate &&
-              (word.selectedDate === today ||
-               new Date(word.selectedDate).toISOString().split("T")[0] === today)
-          );
-          if (selectedWord) {
-            console.log(`✅ Updated with Firebase partner word from ${selectedWord.author}`);
-          }
-        }
-      }).catch(err => console.log("Background Firebase sync error:", err));
-    } catch (error) {
-      console.log("Error checking Firebase partner words (non-blocking):", error);
     }
 
     // Default word if no partner word is selected
