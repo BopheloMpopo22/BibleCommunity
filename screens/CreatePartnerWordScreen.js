@@ -25,8 +25,8 @@ const ASSET_WALLPAPERS = [
   { id: "morning-bg", name: "Morning Background", file: require("../assets/background-morning-picture.jpg") },
   { id: "afternoon-bg", name: "Afternoon Background", file: require("../assets/background-afternoon-picture.jpg") },
   { id: "night-bg", name: "Night Background", file: require("../assets/background-night-picture.jpg") },
-  { id: "field-1920", name: "Field", file: require("../assets/field-3629120_640.jpg") },
-  { id: "sea-1920", name: "Sea", file: require("../assets/sea-4242303_640.jpg") },
+  { id: "field-1920", name: "Field", file: require("../assets/field-3629120_1920.jpg") },
+  { id: "sea-1920", name: "Sea", file: require("../assets/sea-4242303_1920.jpg") },
   { id: "joy", name: "Joy", file: require("../assets/Joy Photo.jpg") },
   { id: "hope", name: "Hope", file: require("../assets/Hope Photo.jpg") },
   { id: "faith", name: "Faith", file: require("../assets/Faith photo.jpg") },
@@ -215,13 +215,15 @@ const CreatePartnerWordScreen = ({ navigation }) => {
       }
 
       // Upload video with progress tracking (largest file)
-      if (video && video.uri && !video.uri.startsWith("https://firebasestorage.googleapis.com")) {
+      // Check if video already has Firebase URL (already uploaded)
+      const videoUri = video?.uri || video?.url;
+      if (video && videoUri && !videoUri.startsWith("https://firebasestorage.googleapis.com")) {
         try {
           setUploadStatus("Uploading video...");
           console.log("Uploading partner word video to Firebase Storage...");
           
           const uploadResult = await FirebaseStorageService.uploadVideo(
-            video.uri,
+            videoUri,
             "partners/words/videos",
             null,
             (progress) => {
@@ -241,6 +243,15 @@ const CreatePartnerWordScreen = ({ navigation }) => {
           console.warn("Error uploading partner word video:", uploadError.message);
           Alert.alert("Upload Warning", "Video upload failed, but continuing with submission. Error: " + uploadError.message);
         }
+      } else if (video && videoUri && videoUri.startsWith("https://firebasestorage.googleapis.com")) {
+        // Video already uploaded - just ensure thumbnail is set
+        uploadedVideo = {
+          ...video,
+          uri: videoUri,
+          url: videoUri,
+          thumbnail: thumbnailUrl || video.thumbnail,
+        };
+        setUploadProgress(80);
       }
 
       // Upload wallpaper last (medium size)

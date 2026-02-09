@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: "#333",
+    color: "#fff",
     paddingVertical: 0,
   },
   bookList: {

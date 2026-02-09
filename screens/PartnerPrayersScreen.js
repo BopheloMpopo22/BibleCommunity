@@ -24,8 +24,8 @@ const ASSET_WALLPAPER_MAP = {
   "morning-bg": require("../assets/background-morning-picture.jpg"),
   "afternoon-bg": require("../assets/background-afternoon-picture.jpg"),
   "night-bg": require("../assets/background-night-picture.jpg"),
-  "field-1920": require("../assets/field-3629120_640.jpg"),
-  "sea-1920": require("../assets/sea-4242303_640.jpg"),
+  "field-1920": require("../assets/field-3629120_1920.jpg"),
+  "sea-1920": require("../assets/sea-4242303_1920.jpg"),
   "joy": require("../assets/Joy Photo.jpg"),
   "hope": require("../assets/Hope Photo.jpg"),
   "faith": require("../assets/Faith photo.jpg"),
@@ -35,36 +35,18 @@ const ASSET_WALLPAPER_MAP = {
   "bible": require("../assets/open-bible-black-background.jpg"),
 };
 
-const ADMIN_EMAIL = "bophelompopo22@gmail.com";
-
 const PartnerPrayersScreen = ({ navigation }) => {
   const [prayers, setPrayers] = useState([]);
   const [selectedPrayer, setSelectedPrayer] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
   const [filter, setFilter] = useState("all"); // all, morning, afternoon, evening
-  const [isAdmin, setIsAdmin] = useState(false);
 
   useFocusEffect(
     React.useCallback(() => {
-      checkAdminStatus();
       loadPrayers();
     }, [])
   );
-
-  const checkAdminStatus = async () => {
-    try {
-      const currentUser = await WorkingAuthService.getCurrentUser();
-      if (currentUser && currentUser.email === ADMIN_EMAIL) {
-        setIsAdmin(true);
-      } else {
-        setIsAdmin(false);
-      }
-    } catch (error) {
-      console.error("Error checking admin status:", error);
-      setIsAdmin(false);
-    }
-  };
 
   const loadPrayers = async () => {
     try {
@@ -75,9 +57,15 @@ const PartnerPrayersScreen = ({ navigation }) => {
       // Filter by current user
       const currentUser = await WorkingAuthService.getCurrentUser();
       if (currentUser) {
-        const userPrayers = allPrayers.filter(
-          (prayer) => prayer.authorId === currentUser.uid
-        );
+        // Check if user is admin
+        const AdminService = (await import("../services/AdminService")).default;
+        const isAdmin = await AdminService.isAdmin();
+        
+        // Filter prayers: admin sees all, regular partners see only their own
+        const userPrayers = isAdmin 
+          ? allPrayers  // Admin sees all prayers
+          : allPrayers.filter((prayer) => prayer.authorId === currentUser.uid);  // Partners see only their own
+        
         // Sort by creation date (newest first)
         userPrayers.sort((a, b) => {
           const dateA = new Date(a.createdAt || 0);
@@ -95,12 +83,6 @@ const PartnerPrayersScreen = ({ navigation }) => {
   };
 
   const handleSelectDate = async () => {
-    // Check if user is admin
-    if (!isAdmin) {
-      Alert.alert("Access Denied", "Only the administrator can schedule dates. You can view scheduled dates but cannot change them.");
-      return;
-    }
-
     if (!selectedDate.trim()) {
       Alert.alert("Required", "Please enter a date");
       return;
@@ -416,23 +398,16 @@ const PartnerPrayersScreen = ({ navigation }) => {
                 <Text style={styles.prayerDate}>
                   {formatDate(prayer.selectedDate)}
                 </Text>
-                {isAdmin ? (
-                  <TouchableOpacity
-                    style={styles.selectButton}
-                    onPress={() => {
-                      setSelectedPrayer(prayer);
-                      setShowDatePicker(true);
-                    }}
-                  >
-                    <Ionicons name="calendar" size={16} color="#1a365d" />
-                    <Text style={styles.selectButtonText}>Select Date</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <View style={styles.viewOnlyBadge}>
-                    <Ionicons name="eye" size={16} color="#666" />
-                    <Text style={styles.viewOnlyText}>View Only</Text>
-                  </View>
-                )}
+                <TouchableOpacity
+                  style={styles.selectButton}
+                  onPress={() => {
+                    setSelectedPrayer(prayer);
+                    setShowDatePicker(true);
+                  }}
+                >
+                  <Ionicons name="calendar" size={16} color="#1a365d" />
+                  <Text style={styles.selectButtonText}>Select Date</Text>
+                </TouchableOpacity>
               </View>
             </View>
             );
@@ -727,20 +702,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: "#1a365d",
-  },
-  viewOnlyBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f5f5f5",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 4,
-  },
-  viewOnlyText: {
-    fontSize: 12,
-    color: "#666",
-    fontStyle: "italic",
   },
   modalOverlay: {
     flex: 1,

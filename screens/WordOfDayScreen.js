@@ -32,8 +32,8 @@ const ASSET_WALLPAPER_MAP = {
   "morning-bg": require("../assets/background-morning-picture.jpg"),
   "afternoon-bg": require("../assets/background-afternoon-picture.jpg"),
   "night-bg": require("../assets/background-night-picture.jpg"),
-  "field-1920": require("../assets/field-3629120_640.jpg"),
-  "sea-1920": require("../assets/sea-4242303_640.jpg"),
+  "field-1920": require("../assets/field-3629120_1920.jpg"),
+  "sea-1920": require("../assets/sea-4242303_1920.jpg"),
   "joy": require("../assets/Joy Photo.jpg"),
   "hope": require("../assets/Hope Photo.jpg"),
   "faith": require("../assets/Faith photo.jpg"),
@@ -89,14 +89,16 @@ const WordOfDayScreen = ({ navigation }) => {
       loadComments(word);
       
       // Get cached video URI if available, otherwise PRELOAD before allowing play
-      if (word?.video?.uri) {
+      // Normalize video URL - check both uri and url properties
+      const videoUrl = word?.video?.uri || word?.video?.url;
+      if (videoUrl) {
         try {
-          console.log("[VideoCache] Checking cache for:", word.video.uri);
-          const isCached = await VideoCacheService.isCached(word.video.uri);
+          console.log("[VideoCache] Checking cache for:", videoUrl);
+          const isCached = await VideoCacheService.isCached(videoUrl);
           console.log("[VideoCache] Is cached?", isCached);
 
           if (isCached) {
-            const cachedPath = VideoCacheService.getCachedPath(word.video.uri);
+            const cachedPath = VideoCacheService.getCachedPath(videoUrl);
             console.log("[VideoCache] ✅ Using cached video:", cachedPath);
             setCachedVideoUri(cachedPath);
             setIsVideoReady(true); // Cached videos are ready immediately
@@ -108,7 +110,7 @@ const WordOfDayScreen = ({ navigation }) => {
             // PRELOAD: Download cache BEFORE allowing play
             try {
               console.log("[VideoCache] Starting preload...");
-              const cachedPath = await VideoCacheService.preCacheVideo(word.video.uri);
+              const cachedPath = await VideoCacheService.preCacheVideo(videoUrl);
               if (cachedPath) {
                 console.log("[VideoCache] ✅ Preload complete, using cached:", cachedPath);
                 setCachedVideoUri(cachedPath);
@@ -185,10 +187,11 @@ const WordOfDayScreen = ({ navigation }) => {
 
   // Update video height when video loads - ONLY set once per video, never update during playback
   const handleVideoLoad = useCallback((status) => {
-    // Reset height flag if video URI changed
-    if (wordOfDay?.video?.uri && previousVideoUriRef.current !== wordOfDay.video.uri) {
+    // Reset height flag if video URI changed - normalize URL (check both uri and url)
+    const videoUrl = wordOfDay?.video?.uri || wordOfDay?.video?.url;
+    if (videoUrl && previousVideoUriRef.current !== videoUrl) {
       videoHeightSetRef.current = false;
-      previousVideoUriRef.current = wordOfDay.video.uri;
+      previousVideoUriRef.current = videoUrl;
     }
     
     // Only set height once per video load - never update during playback
@@ -462,7 +465,7 @@ const WordOfDayScreen = ({ navigation }) => {
               <View style={styles.separatorLine} />
 
               {/* Video Box */}
-              {wordOfDay.video && wordOfDay.video.uri && (
+              {(wordOfDay.video && (wordOfDay.video.uri || wordOfDay.video.url)) && (
                 <>
                   <View 
                     style={styles.videoBoxContainer}
@@ -489,10 +492,10 @@ const WordOfDayScreen = ({ navigation }) => {
                         </View>
                       )}
                       <Video
-                        key={wordOfDay.video.uri}
+                        key={wordOfDay.video.uri || wordOfDay.video.url}
                         ref={videoRef}
                         source={{
-                          uri: cachedVideoUri || wordOfDay.video.uri,
+                          uri: cachedVideoUri || wordOfDay.video.uri || wordOfDay.video.url,
                         }}
                         style={[
                           styles.video,
@@ -620,7 +623,7 @@ const WordOfDayScreen = ({ navigation }) => {
               )}
 
               {/* Separator Line */}
-              {(wordOfDay.video && wordOfDay.video.uri) && <View style={styles.separatorLine} />}
+              {(wordOfDay.video && (wordOfDay.video.uri || wordOfDay.video.url)) && <View style={styles.separatorLine} />}
 
               {/* Actions */}
               <View style={styles.actionsContainer}>
@@ -715,7 +718,7 @@ const WordOfDayScreen = ({ navigation }) => {
                   )}
 
                   {/* Video Player */}
-                  {wordOfDay.video && wordOfDay.video.uri && (
+                  {wordOfDay.video && (wordOfDay.video.uri || wordOfDay.video.url) && (
                     <View 
                       style={styles.videoBoxContainer}
                       onLayout={(event) => {
@@ -745,10 +748,10 @@ const WordOfDayScreen = ({ navigation }) => {
                           </View>
                         )}
                         <Video
-                          key={wordOfDay.video.uri}
+                          key={wordOfDay.video.uri || wordOfDay.video.url}
                           ref={videoRef}
                           source={{
-                            uri: cachedVideoUri || wordOfDay.video.uri,
+                            uri: cachedVideoUri || wordOfDay.video.uri || wordOfDay.video.url,
                           }}
                           style={[
                             styles.video,

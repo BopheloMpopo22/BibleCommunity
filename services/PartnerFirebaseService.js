@@ -109,21 +109,30 @@ class PartnerFirebaseService {
       let uploadedVideo = word.video;
       let uploadedWallpaper = word.wallpaper;
 
-      if (word.video && word.video.uri && !word.video.uri.startsWith("https://firebasestorage.googleapis.com")) {
+      // Normalize video URL - check both uri and url properties
+      const videoUri = word.video?.uri || word.video?.url;
+      if (word.video && videoUri && !videoUri.startsWith("https://firebasestorage.googleapis.com")) {
         try {
           const uploadResult = await FirebaseStorageService.uploadVideo(
-            word.video.uri,
+            videoUri,
             "partners/words/videos"
           );
           uploadedVideo = {
             ...word.video,
             uri: uploadResult.url,
             url: uploadResult.url,
-            thumbnail: uploadResult.thumbnail || word.video.thumbnail,
+            thumbnail: word.video.thumbnail || uploadResult.thumbnail,
           };
         } catch (uploadError) {
           console.warn("Error uploading partner word video:", uploadError.message);
         }
+      } else if (word.video && videoUri && videoUri.startsWith("https://firebasestorage.googleapis.com")) {
+        // Video already uploaded - preserve existing data including thumbnail
+        uploadedVideo = {
+          ...word.video,
+          uri: videoUri,
+          url: videoUri,
+        };
       }
 
       if (word.wallpaper && word.wallpaper.type === "phone" && word.wallpaper.uri && !word.wallpaper.uri.startsWith("https://firebasestorage.googleapis.com")) {

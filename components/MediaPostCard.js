@@ -29,7 +29,6 @@ const MediaPostCard = ({
   const [showImageViewer, setShowImageViewer] = useState(false);
   const [showFullContent, setShowFullContent] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
-  const [isAuthor, setIsAuthor] = useState(false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [hasVideoStarted, setHasVideoStarted] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -93,41 +92,6 @@ const MediaPostCard = ({
   const maxContentLength = 150; // Characters before showing "Read more"
   const shouldShowReadMore =
     post.content && post.content.length > maxContentLength;
-
-  // Check if current user is the author
-  React.useEffect(() => {
-    const checkAuthor = async () => {
-      try {
-        const currentUser = await WorkingAuthService.getCurrentUser();
-        if (!currentUser || !currentUser.uid) {
-          setIsAuthor(false);
-          return;
-        }
-
-        // Check if user is the author - handle both authorId and author_id
-        const postAuthorId = post.authorId || post.author_id;
-        
-        // If post has no authorId, allow deletion for authenticated users (legacy/test posts)
-        // If post has authorId, only allow if it matches current user
-        const userIsAuthor = postAuthorId 
-          ? currentUser.uid === postAuthorId 
-          : true; // Allow deletion of posts without authorId (old test posts)
-        
-        console.log("MediaPostCard author check:", {
-          postId: post.id,
-          postAuthorId: postAuthorId || "missing",
-          currentUserId: currentUser.uid,
-          isAuthor: userIsAuthor
-        });
-        
-        setIsAuthor(userIsAuthor);
-      } catch (error) {
-        console.error("Error checking author:", error);
-        setIsAuthor(false);
-      }
-    };
-    checkAuthor();
-  }, [post.authorId, post.author_id]);
 
   const handleLike = () => {
     const next = !isLiked;
@@ -728,33 +692,45 @@ const MediaPostCard = ({
             <Text style={styles.timeAgo}>{post.timeAgo}</Text>
           </View>
         </View>
-        {/* Three dots menu - only show for author */}
-        {isAuthor && (
-          <TouchableOpacity
-            style={styles.moreButton}
-            onPress={async () => {
-              Alert.alert("Post Options", "What would you like to do?", [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Delete Post",
-                  style: "destructive",
-                  onPress: async () => {
-                    try {
-                      await PostService.deletePost(post.id);
-                      if (onDelete) onDelete(post);
-                      Alert.alert("Success", "Post deleted successfully");
-                    } catch (e) {
-                      const errorMessage = e.message || "Failed to delete post";
-                      Alert.alert("Error", errorMessage);
-                    }
+        <TouchableOpacity
+          style={styles.moreButton}
+          onPress={async () => {
+            try {
+              const currentUser = await WorkingAuthService.getCurrentUser();
+              const isAuthor =
+                currentUser &&
+                currentUser.uid &&
+                post.authorId &&
+                currentUser.uid === post.authorId;
+              if (isAuthor) {
+                Alert.alert("Post Options", "What would you like to do?", [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Delete Post",
+                    style: "destructive",
+                    onPress: async () => {
+                      try {
+                        await PostService.deletePost(post.id);
+                        if (onDelete) onDelete(post);
+                      } catch (e) {
+                        Alert.alert("Error", "Failed to delete post");
+                      }
+                    },
                   },
-                },
-              ]);
-            }}
-          >
-            <Ionicons name="ellipsis-horizontal" size={20} color="#666" />
-          </TouchableOpacity>
-        )}
+                ]);
+              } else {
+                Alert.alert(
+                  "Post Options",
+                  "No actions available for this post."
+                );
+              }
+            } catch (e) {
+              Alert.alert("Error", "Unable to load options");
+            }
+          }}
+        >
+          <Ionicons name="ellipsis-horizontal" size={20} color="#666" />
+        </TouchableOpacity>
       </View>
 
       {/* Title */}

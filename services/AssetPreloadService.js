@@ -28,8 +28,8 @@ class AssetPreloadService {
     openArtHourglass: require("../assets/openart-hourglass.png"),
 
     // Meditation category images (permanent media)
-    meditationField: require("../assets/field-3629120_640.jpg"),
-    meditationSea: require("../assets/sea-4242303_640.jpg"),
+    meditationField: require("../assets/field-3629120_1920.jpg"),
+    meditationSea: require("../assets/sea-4242303_1920.jpg"),
     meditationJoy: require("../assets/Joy Photo.jpg"),
     meditationHope: require("../assets/Hope Photo.jpg"),
     meditationFaith: require("../assets/Faith photo.jpg"),
