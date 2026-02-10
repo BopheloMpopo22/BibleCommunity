@@ -91,7 +91,20 @@ const WordOfDayScreen = ({ navigation }) => {
       // Get cached video URI if available, otherwise PRELOAD before allowing play
       // Normalize video URL - check both uri and url properties
       const videoUrl = word?.video?.uri || word?.video?.url;
-      if (videoUrl) {
+      
+      // Skip videos with local file paths (they won't work on other devices)
+      // Only process videos with Firebase Storage URLs or HTTP/HTTPS URLs
+      const isValidVideoUrl = videoUrl && (
+        videoUrl.startsWith("https://firebasestorage.googleapis.com") ||
+        videoUrl.startsWith("http://") ||
+        videoUrl.startsWith("https://")
+      );
+      
+      if (videoUrl && !isValidVideoUrl) {
+        console.warn("[VideoCache] Skipping video with local path (not accessible on other devices):", videoUrl);
+        setCachedVideoUri(null);
+        setIsVideoReady(false);
+      } else if (isValidVideoUrl) {
         try {
           console.log("[VideoCache] Checking cache for:", videoUrl);
           const isCached = await VideoCacheService.isCached(videoUrl);
@@ -136,6 +149,7 @@ const WordOfDayScreen = ({ navigation }) => {
           setIsVideoReady(true); // Allow play anyway
         }
       } else {
+        // No video or invalid video URL
         setCachedVideoUri(null);
         setIsVideoReady(true);
       }
@@ -465,7 +479,16 @@ const WordOfDayScreen = ({ navigation }) => {
               <View style={styles.separatorLine} />
 
               {/* Video Box */}
-              {(wordOfDay.video && (wordOfDay.video.uri || wordOfDay.video.url)) && (
+              {/* Only show video if it has a valid Firebase Storage URL or HTTP/HTTPS URL */}
+              {(() => {
+                const videoUrl = wordOfDay.video?.uri || wordOfDay.video?.url;
+                const isValidVideoUrl = videoUrl && (
+                  videoUrl.startsWith("https://firebasestorage.googleapis.com") ||
+                  videoUrl.startsWith("http://") ||
+                  videoUrl.startsWith("https://")
+                );
+                return isValidVideoUrl;
+              })() && (
                 <>
                   <View 
                     style={styles.videoBoxContainer}
@@ -623,7 +646,15 @@ const WordOfDayScreen = ({ navigation }) => {
               )}
 
               {/* Separator Line */}
-              {(wordOfDay.video && (wordOfDay.video.uri || wordOfDay.video.url)) && <View style={styles.separatorLine} />}
+              {(() => {
+                const videoUrl = wordOfDay.video?.uri || wordOfDay.video?.url;
+                const isValidVideoUrl = videoUrl && (
+                  videoUrl.startsWith("https://firebasestorage.googleapis.com") ||
+                  videoUrl.startsWith("http://") ||
+                  videoUrl.startsWith("https://")
+                );
+                return isValidVideoUrl;
+              })() && <View style={styles.separatorLine} />}
 
               {/* Actions */}
               <View style={styles.actionsContainer}>
@@ -718,7 +749,15 @@ const WordOfDayScreen = ({ navigation }) => {
                   )}
 
                   {/* Video Player */}
-                  {wordOfDay.video && (wordOfDay.video.uri || wordOfDay.video.url) && (
+                  {(() => {
+                    const videoUrl = wordOfDay.video?.uri || wordOfDay.video?.url;
+                    const isValidVideoUrl = videoUrl && (
+                      videoUrl.startsWith("https://firebasestorage.googleapis.com") ||
+                      videoUrl.startsWith("http://") ||
+                      videoUrl.startsWith("https://")
+                    );
+                    return isValidVideoUrl;
+                  })() && (
                     <View 
                       style={styles.videoBoxContainer}
                       onLayout={(event) => {

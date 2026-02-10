@@ -117,14 +117,22 @@ class PartnerFirebaseService {
             videoUri,
             "partners/words/videos"
           );
-          uploadedVideo = {
-            ...word.video,
-            uri: uploadResult.url,
-            url: uploadResult.url,
-            thumbnail: word.video.thumbnail || uploadResult.thumbnail,
-          };
+          
+          // Only set uploadedVideo if upload succeeded and we got a Firebase URL
+          if (uploadResult && uploadResult.url && uploadResult.url.startsWith("https://firebasestorage.googleapis.com")) {
+            uploadedVideo = {
+              ...word.video,
+              uri: uploadResult.url,
+              url: uploadResult.url,
+              thumbnail: word.video.thumbnail || uploadResult.thumbnail,
+            };
+          } else {
+            console.warn("Video upload succeeded but no valid Firebase URL returned");
+            uploadedVideo = null; // Don't save video with local path
+          }
         } catch (uploadError) {
-          console.warn("Error uploading partner word video:", uploadError.message);
+          console.error("Error uploading partner word video:", uploadError.message);
+          uploadedVideo = null; // Don't save video if upload failed
         }
       } else if (word.video && videoUri && videoUri.startsWith("https://firebasestorage.googleapis.com")) {
         // Video already uploaded - preserve existing data including thumbnail
@@ -133,6 +141,10 @@ class PartnerFirebaseService {
           uri: videoUri,
           url: videoUri,
         };
+      } else if (word.video && videoUri) {
+        // Video has a local path but wasn't uploaded - don't save it
+        console.warn("Video has local path but wasn't uploaded. Removing video.");
+        uploadedVideo = null;
       }
 
       if (word.wallpaper && word.wallpaper.type === "phone" && word.wallpaper.uri && !word.wallpaper.uri.startsWith("https://firebasestorage.googleapis.com")) {
