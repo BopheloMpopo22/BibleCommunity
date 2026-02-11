@@ -63,14 +63,28 @@ const CreatePartnerScriptureScreen = ({ navigation }) => {
       const result = await MediaService.pickVideo();
       if (result.length > 0) {
         const video = result[0];
-        // Validate video duration (3 minutes max)
-        if (video.duration && video.duration > 180) {
-          Alert.alert(
-            "Video Too Long",
-            "Videos must be 3 minutes or less. Please select a shorter video.",
-            [{ text: "OK" }]
-          );
-          return;
+        // Validate video duration (3 minutes = 180 seconds max)
+        // Duration is in seconds from ImagePicker, but check if it might be in milliseconds
+        let durationInSeconds = video.duration;
+        if (durationInSeconds) {
+          // If duration is greater than 1000, it's likely in milliseconds, convert to seconds
+          if (durationInSeconds > 1000) {
+            durationInSeconds = durationInSeconds / 1000;
+          }
+          
+          console.log(`Video duration: ${durationInSeconds} seconds (${Math.round(durationInSeconds / 60)} minutes)`);
+          
+          // Check if duration exceeds 3 minutes (180 seconds)
+          if (durationInSeconds > 180) {
+            const minutes = Math.floor(durationInSeconds / 60);
+            const seconds = Math.round(durationInSeconds % 60);
+            Alert.alert(
+              "Video Too Long",
+              `Your video is ${minutes}:${seconds.toString().padStart(2, '0')} long. Videos must be 3 minutes (3:00) or less. Please select a shorter video.`,
+              [{ text: "OK" }]
+            );
+            return;
+          }
         }
         setVideo(video);
         setShowVideoPicker(false);
@@ -83,8 +97,18 @@ const CreatePartnerScriptureScreen = ({ navigation }) => {
   };
 
   const recordVideo = async () => {
-    // Show tip first
-    setShowRecordingTip(true);
+    // Show warning about video length limit BEFORE recording
+    Alert.alert(
+      "Video Length Limit",
+      "Please note: Videos must be 3 minutes (3:00) or less. Longer videos cannot be uploaded.\n\nMake sure your video is under 3 minutes before recording.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Continue Recording", 
+          onPress: () => setShowRecordingTip(true)
+        }
+      ]
+    );
   };
 
   const handleRecordVideoAfterTip = async () => {
@@ -93,14 +117,28 @@ const CreatePartnerScriptureScreen = ({ navigation }) => {
       const result = await MediaService.recordVideo();
       if (result.length > 0) {
         const video = result[0];
-        // Validate video duration (3 minutes max)
-        if (video.duration && video.duration > 180) {
-          Alert.alert(
-            "Video Too Long",
-            "Videos must be 3 minutes or less. Please record a shorter video.",
-            [{ text: "OK" }]
-          );
-          return;
+        // Validate video duration (3 minutes = 180 seconds max)
+        // Duration is in seconds from ImagePicker, but check if it might be in milliseconds
+        let durationInSeconds = video.duration;
+        if (durationInSeconds) {
+          // If duration is greater than 1000, it's likely in milliseconds, convert to seconds
+          if (durationInSeconds > 1000) {
+            durationInSeconds = durationInSeconds / 1000;
+          }
+          
+          console.log(`Video duration: ${durationInSeconds} seconds (${Math.round(durationInSeconds / 60)} minutes)`);
+          
+          // Check if duration exceeds 3 minutes (180 seconds)
+          if (durationInSeconds > 180) {
+            const minutes = Math.floor(durationInSeconds / 60);
+            const seconds = Math.round(durationInSeconds % 60);
+            Alert.alert(
+              "Video Too Long",
+              `Your video is ${minutes}:${seconds.toString().padStart(2, '0')} long. Videos must be 3 minutes (3:00) or less. Please record a shorter video.`,
+              [{ text: "OK" }]
+            );
+            return;
+          }
         }
         setVideo(video);
         setShowVideoPicker(false);
@@ -621,13 +659,21 @@ const CreatePartnerScriptureScreen = ({ navigation }) => {
                 </TouchableOpacity>
               </View>
             ) : (
-              <TouchableOpacity
-                style={styles.addVideoButton}
-                onPress={() => setShowVideoPicker(true)}
-              >
-                <Ionicons name="videocam-outline" size={32} color="#2d5016" />
-                <Text style={styles.addVideoButtonText}>Add Video</Text>
-              </TouchableOpacity>
+              <>
+                <View style={styles.videoWarningBox}>
+                  <Ionicons name="information-circle" size={20} color="#FF8C42" />
+                  <Text style={styles.videoWarningText}>
+                    Video length limit: 3 minutes (3:00) maximum
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.addVideoButton}
+                  onPress={() => setShowVideoPicker(true)}
+                >
+                  <Ionicons name="videocam-outline" size={32} color="#2d5016" />
+                  <Text style={styles.addVideoButtonText}>Add Video</Text>
+                </TouchableOpacity>
+              </>
             )}
           </View>
         </ScrollView>
@@ -1277,6 +1323,23 @@ const styles = StyleSheet.create({
   },
   thumbnailOptionTextDecline: {
     color: "#666",
+  },
+  videoWarningBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFF3E0",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#FF8C42",
+  },
+  videoWarningText: {
+    fontSize: 13,
+    color: "#E65100",
+    marginLeft: 8,
+    flex: 1,
+    fontWeight: "500",
   },
 });
 

@@ -38,13 +38,51 @@ class TimeBasedPrayerService {
       if (partnerPrayers && partnerPrayers.length > 0) {
         // Use ISO date format (YYYY-MM-DD) for consistent comparison
         const today = new Date().toISOString().split("T")[0];
+        console.log(`🔍 Looking for ${timeOfDay} prayer scheduled for ${today}`);
+        console.log(`📋 Total partner prayers: ${partnerPrayers.length}`);
+        
+        // Filter prayers for this time of day and log them
+        const prayersForTime = partnerPrayers.filter(p => p.time === timeOfDay);
+        console.log(`📋 Prayers for ${timeOfDay}: ${prayersForTime.length}`);
+        prayersForTime.forEach(p => {
+          console.log(`  - Prayer by ${p.author}: isSelected=${p.isSelected}, selectedDate=${p.selectedDate}`);
+        });
+        
         const selectedPrayer = partnerPrayers.find(
-          (prayer) =>
-            prayer.time === timeOfDay &&
-            prayer.isSelected === true &&
-            prayer.selectedDate &&
-            (prayer.selectedDate === today ||
-             new Date(prayer.selectedDate).toISOString().split("T")[0] === today)
+          (prayer) => {
+            const matchesTime = prayer.time === timeOfDay;
+            const isSelected = prayer.isSelected === true;
+            const hasDate = !!prayer.selectedDate;
+            
+            if (!matchesTime || !isSelected || !hasDate) {
+              return false;
+            }
+            
+            // Normalize selectedDate to ISO format for comparison
+            let normalizedSelectedDate = prayer.selectedDate;
+            try {
+              // If it's already in ISO format (YYYY-MM-DD), use as is
+              if (/^\d{4}-\d{2}-\d{2}$/.test(normalizedSelectedDate)) {
+                // Already in correct format
+              } else {
+                // Try to parse and convert to ISO format
+                const dateObj = new Date(normalizedSelectedDate);
+                if (!isNaN(dateObj.getTime())) {
+                  normalizedSelectedDate = dateObj.toISOString().split("T")[0];
+                }
+              }
+            } catch (e) {
+              console.warn("Error normalizing date:", normalizedSelectedDate, e);
+            }
+            
+            const matchesDate = normalizedSelectedDate === today;
+            
+            if (matchesDate) {
+              console.log(`✅ Found matching prayer: ${prayer.author}, date: ${normalizedSelectedDate}, today: ${today}`);
+            }
+            
+            return matchesDate;
+          }
         );
         
         if (selectedPrayer) {
@@ -222,13 +260,35 @@ class TimeBasedPrayerService {
       if (partnerScriptures && partnerScriptures.length > 0) {
         // Use ISO date format (YYYY-MM-DD) for consistent comparison
         const today = new Date().toISOString().split("T")[0];
+        console.log(`🔍 Looking for ${timeOfDay} scripture scheduled for ${today}`);
+        
         const selectedScripture = partnerScriptures.find(
-          (scripture) =>
-            scripture.time === timeOfDay &&
-            scripture.isSelected === true &&
-            scripture.selectedDate &&
-            (scripture.selectedDate === today ||
-             new Date(scripture.selectedDate).toISOString().split("T")[0] === today)
+          (scripture) => {
+            const matchesTime = scripture.time === timeOfDay;
+            const isSelected = scripture.isSelected === true;
+            const hasDate = !!scripture.selectedDate;
+            
+            if (!matchesTime || !isSelected || !hasDate) {
+              return false;
+            }
+            
+            // Normalize selectedDate to ISO format for comparison
+            let normalizedSelectedDate = scripture.selectedDate;
+            try {
+              if (/^\d{4}-\d{2}-\d{2}$/.test(normalizedSelectedDate)) {
+                // Already in correct format
+              } else {
+                const dateObj = new Date(normalizedSelectedDate);
+                if (!isNaN(dateObj.getTime())) {
+                  normalizedSelectedDate = dateObj.toISOString().split("T")[0];
+                }
+              }
+            } catch (e) {
+              console.warn("Error normalizing date:", normalizedSelectedDate, e);
+            }
+            
+            return normalizedSelectedDate === today;
+          }
         );
         
         if (selectedScripture) {
@@ -322,12 +382,34 @@ class TimeBasedPrayerService {
       
       if (partnerWords && partnerWords.length > 0) {
         const today = new Date().toISOString().split("T")[0];
+        console.log(`🔍 Looking for word scheduled for ${today}`);
+        
         const selectedWord = partnerWords.find(
-          (word) =>
-            word.isSelected === true &&
-            word.selectedDate &&
-            (word.selectedDate === today ||
-             new Date(word.selectedDate).toISOString().split("T")[0] === today)
+          (word) => {
+            const isSelected = word.isSelected === true;
+            const hasDate = !!word.selectedDate;
+            
+            if (!isSelected || !hasDate) {
+              return false;
+            }
+            
+            // Normalize selectedDate to ISO format for comparison
+            let normalizedSelectedDate = word.selectedDate;
+            try {
+              if (/^\d{4}-\d{2}-\d{2}$/.test(normalizedSelectedDate)) {
+                // Already in correct format
+              } else {
+                const dateObj = new Date(normalizedSelectedDate);
+                if (!isNaN(dateObj.getTime())) {
+                  normalizedSelectedDate = dateObj.toISOString().split("T")[0];
+                }
+              }
+            } catch (e) {
+              console.warn("Error normalizing date:", normalizedSelectedDate, e);
+            }
+            
+            return normalizedSelectedDate === today;
+          }
         );
         
         if (selectedWord) {
