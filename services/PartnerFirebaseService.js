@@ -299,24 +299,36 @@ class PartnerFirebaseService {
         });
       });
 
-      // Also get local prayers and merge
+      console.log(`📥 Fetched ${prayers.length} partner prayers from Firebase`);
+      
+      // Log scheduled prayers for debugging
+      const scheduledPrayers = prayers.filter(p => p.isSelected === true && p.selectedDate);
+      if (scheduledPrayers.length > 0) {
+        console.log(`📅 Found ${scheduledPrayers.length} scheduled prayers:`);
+        scheduledPrayers.forEach(p => {
+          console.log(`  - ${p.time} prayer by ${p.author}: scheduled for ${p.selectedDate}`);
+        });
+      }
+
+      // Also get local prayers and merge (Firebase takes priority)
       const localPrayers = await this.getPartnerPrayersLocally();
       const firebasePrayerIds = new Set(prayers.map(p => p.id));
       const uniqueLocalPrayers = localPrayers.filter(p => !firebasePrayerIds.has(p.id));
 
-      return [...prayers, ...uniqueLocalPrayers];
+      // IMPORTANT: Firebase data takes priority - if a prayer exists in Firebase, use Firebase version
+      // This ensures scheduled content from Firebase is always used, not stale local cache
+      const allPrayers = [...prayers, ...uniqueLocalPrayers];
+      console.log(`✅ Returning ${allPrayers.length} total prayers (${prayers.length} from Firebase, ${uniqueLocalPrayers.length} from local)`);
+      
+      return allPrayers;
     } catch (error) {
       console.warn("Error getting partner prayers from Firebase (using local storage):", error.message);
       return await this.getPartnerPrayersLocally();
     }
   }
 
-  // Get all partner words (LOCAL FIRST for instant display, then sync Firebase)
+  // Get all partner words from Firebase (Firebase takes priority for scheduled content)
   static async getAllPartnerWords() {
-    // Return local data immediately (instant display)
-    const localWords = await this.getPartnerWordsLocally();
-    
-    // Fetch from Firebase in background (non-blocking)
     try {
       const wordsRef = collection(db, "partner_words");
       const querySnapshot = await getDocs(wordsRef);
@@ -331,15 +343,30 @@ class PartnerFirebaseService {
         });
       });
 
-      // Merge Firebase with local
+      console.log(`📥 Fetched ${words.length} partner words from Firebase`);
+      
+      // Log scheduled words for debugging
+      const scheduledWords = words.filter(w => w.isSelected === true && w.selectedDate);
+      if (scheduledWords.length > 0) {
+        console.log(`📅 Found ${scheduledWords.length} scheduled words:`);
+        scheduledWords.forEach(w => {
+          console.log(`  - Word by ${w.author}: scheduled for ${w.selectedDate}`);
+        });
+      }
+
+      // Also get local words and merge (Firebase takes priority)
+      const localWords = await this.getPartnerWordsLocally();
       const firebaseWordIds = new Set(words.map(w => w.id));
       const uniqueLocalWords = localWords.filter(w => !firebaseWordIds.has(w.id));
 
-      return [...words, ...uniqueLocalWords];
+      // IMPORTANT: Firebase data takes priority - ensures scheduled content is always used
+      const allWords = [...words, ...uniqueLocalWords];
+      console.log(`✅ Returning ${allWords.length} total words (${words.length} from Firebase, ${uniqueLocalWords.length} from local)`);
+      
+      return allWords;
     } catch (error) {
       console.warn("Error getting partner words from Firebase (using local only):", error.message);
-      // Return local data if Firebase fails
-      return localWords;
+      return await this.getPartnerWordsLocally();
     }
   }
 
