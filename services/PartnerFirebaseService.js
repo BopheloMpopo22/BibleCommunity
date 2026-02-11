@@ -386,15 +386,30 @@ class PartnerFirebaseService {
         });
       });
 
-      // Merge Firebase with local
+      console.log(`📥 Fetched ${scriptures.length} partner scriptures from Firebase`);
+      
+      // Log scheduled scriptures for debugging
+      const scheduledScriptures = scriptures.filter(s => s.isSelected === true && s.selectedDate);
+      if (scheduledScriptures.length > 0) {
+        console.log(`📅 Found ${scheduledScriptures.length} scheduled scriptures:`);
+        scheduledScriptures.forEach(s => {
+          console.log(`  - ${s.time} scripture by ${s.author}: scheduled for ${s.selectedDate}`);
+        });
+      }
+
+      // Also get local scriptures and merge (Firebase takes priority)
+      const localScriptures = await this.getPartnerScripturesLocally();
       const firebaseScriptureIds = new Set(scriptures.map(s => s.id));
       const uniqueLocalScriptures = localScriptures.filter(s => !firebaseScriptureIds.has(s.id));
 
-      return [...scriptures, ...uniqueLocalScriptures];
+      // IMPORTANT: Firebase data takes priority - ensures scheduled content is always used
+      const allScriptures = [...scriptures, ...uniqueLocalScriptures];
+      console.log(`✅ Returning ${allScriptures.length} total scriptures (${scriptures.length} from Firebase, ${uniqueLocalScriptures.length} from local)`);
+      
+      return allScriptures;
     } catch (error) {
       console.warn("Error getting partner scriptures from Firebase (using local only):", error.message);
-      // Return local data if Firebase fails
-      return localScriptures;
+      return await this.getPartnerScripturesLocally();
     }
   }
 
