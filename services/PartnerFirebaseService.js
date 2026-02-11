@@ -370,12 +370,8 @@ class PartnerFirebaseService {
     }
   }
 
-  // Get all partner scriptures (LOCAL FIRST for instant display, then sync Firebase)
+  // Get all partner scriptures from Firebase (Firebase takes priority for scheduled content)
   static async getAllPartnerScriptures() {
-    // Return local data immediately (instant display)
-    const localScriptures = await this.getPartnerScripturesLocally();
-    
-    // Fetch from Firebase in background (non-blocking)
     try {
       const scripturesRef = collection(db, "partner_scriptures");
       const querySnapshot = await getDocs(scripturesRef);
