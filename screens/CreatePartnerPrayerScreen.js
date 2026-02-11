@@ -55,12 +55,24 @@ const CreatePartnerPrayerScreen = ({ navigation }) => {
   const [textColor, setTextColor] = useState("black"); // "black" or "white"
   const [showTextColorPicker, setShowTextColorPicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState(""); // Current upload step
 
   const pickVideo = async () => {
     try {
       const result = await MediaService.pickVideo();
       if (result.length > 0) {
-        setVideo(result[0]);
+        const video = result[0];
+        // Validate video duration (3 minutes max)
+        if (video.duration && video.duration > 180) {
+          Alert.alert(
+            "Video Too Long",
+            "Videos must be 3 minutes or less. Please select a shorter video.",
+            [{ text: "OK" }]
+          );
+          return;
+        }
+        setVideo(video);
         setShowVideoPicker(false);
         // After video is selected, show thumbnail picker
         setShowThumbnailPicker(true);
@@ -80,7 +92,17 @@ const CreatePartnerPrayerScreen = ({ navigation }) => {
     try {
       const result = await MediaService.recordVideo();
       if (result.length > 0) {
-        setVideo(result[0]);
+        const video = result[0];
+        // Validate video duration (3 minutes max)
+        if (video.duration && video.duration > 180) {
+          Alert.alert(
+            "Video Too Long",
+            "Videos must be 3 minutes or less. Please record a shorter video.",
+            [{ text: "OK" }]
+          );
+          return;
+        }
+        setVideo(video);
         setShowVideoPicker(false);
         // After video is selected, show thumbnail picker
         setShowThumbnailPicker(true);
@@ -176,10 +198,14 @@ const CreatePartnerPrayerScreen = ({ navigation }) => {
     }
 
     setLoading(true);
+    setUploadProgress(0);
+    setUploadStatus("Preparing upload...");
+    
     try {
       const currentUser = await WorkingAuthService.getCurrentUser();
       if (!currentUser) {
         Alert.alert("Error", "Please sign in to create a prayer");
+        setLoading(false);
         return;
       }
 
@@ -204,20 +230,26 @@ const CreatePartnerPrayerScreen = ({ navigation }) => {
         }
       }
 
-      if (video && video.uri && !video.uri.startsWith("https://firebasestorage.googleapis.com")) {
+      // Normalize video URL - check both uri and url properties
+      const videoUri = video?.uri || video?.url;
+      if (video && videoUri && !videoUri.startsWith("https://firebasestorage.googleapis.com")) {
         try {
+          setUploadStatus("Uploading video...");
           console.log("Uploading partner prayer video to Firebase Storage...");
           const FirebaseStorageService = (await import("../services/FirebaseStorageService")).default;
           
-          // Upload thumbnail if provided
+          // Upload thumbnail first (smallest, fastest)
           let thumbnailUrl = null;
           if (thumbnailUri && !thumbnailUri.startsWith("https://firebasestorage.googleapis.com")) {
             try {
+              setUploadStatus("Uploading thumbnail...");
+              setUploadProgress(5);
               const thumbnailUpload = await FirebaseStorageService.uploadImage(
                 thumbnailUri,
                 "partners/prayers/thumbnails"
               );
               thumbnailUrl = thumbnailUpload.url;
+              setUploadProgress(10);
             } catch (thumbError) {
               console.warn("Error uploading thumbnail:", thumbError.message);
             }
@@ -225,25 +257,65 @@ const CreatePartnerPrayerScreen = ({ navigation }) => {
             thumbnailUrl = thumbnailUri; // Already uploaded
           }
 
+          // Upload video with progress tracking
           const uploadResult = await FirebaseStorageService.uploadVideo(
-            video.uri,
-            "partners/prayers/videos"
+            videoUri,
+            "partners/prayers/videos",
+            null,
+            (progress) => {
+              // Progress from 10% to 80% (video is the main upload)
+              setUploadProgress(10 + Math.round(progress * 0.7));
+            }
           );
-          uploadedVideo = {
-            ...video,
-            uri: uploadResult.url,
-            url: uploadResult.url,
-            thumbnail: thumbnailUrl || uploadResult.thumbnail || video.thumbnail,
-          };
-          console.log("Partner prayer video uploaded successfully");
+          
+          // Only set uploadedVideo if upload succeeded and we got a Firebase URL
+          if (uploadResult && uploadResult.url && uploadResult.url.startsWith("https://firebasestorage.googleapis.com")) {
+            uploadedVideo = {
+              ...video,
+              uri: uploadResult.url,
+              url: uploadResult.url,
+              thumbnail: thumbnailUrl || uploadResult.thumbnail || video.thumbnail,
+            };
+            setUploadProgress(80);
+            console.log("Partner prayer video uploaded successfully:", uploadResult.url);
+          } else {
+            throw new Error("Upload succeeded but no valid Firebase URL returned");
+          }
         } catch (uploadError) {
-          console.warn("Error uploading partner prayer video:", uploadError.message);
-          // Continue with local URI if upload fails
+          console.error("Error uploading partner prayer video:", uploadError.message);
+          // Don't save video if upload failed - set to null so it's not saved with local path
+          uploadedVideo = null;
+          Alert.alert(
+            "Video Upload Failed", 
+            "The video could not be uploaded. Please try again or remove the video and submit without it.\n\nError: " + uploadError.message,
+            [
+              { text: "Remove Video", onPress: () => setVideo(null) },
+              { text: "Cancel", style: "cancel", onPress: () => {} }
+            ]
+          );
+          setLoading(false);
+          return; // Stop submission if video upload fails
         }
+      } else if (video && videoUri && videoUri.startsWith("https://firebasestorage.googleapis.com")) {
+        // Video already uploaded - just ensure thumbnail is set
+        uploadedVideo = {
+          ...video,
+          uri: videoUri,
+          url: videoUri,
+          thumbnail: thumbnailUri || video.thumbnail,
+        };
+        setUploadProgress(80);
+      } else if (video && videoUri) {
+        // Video has a local path but wasn't uploaded - don't save it
+        console.warn("Video has local path but wasn't uploaded. Removing video from submission.");
+        uploadedVideo = null;
       }
 
+      // Upload wallpaper last (medium size)
       if (wallpaper && wallpaper.type === "phone" && wallpaper.uri && !wallpaper.uri.startsWith("https://firebasestorage.googleapis.com")) {
         try {
+          setUploadStatus("Uploading wallpaper...");
+          setUploadProgress(85);
           console.log("Uploading partner prayer wallpaper to Firebase Storage...");
           const FirebaseStorageService = (await import("../services/FirebaseStorageService")).default;
           const uploadResult = await FirebaseStorageService.uploadImage(
@@ -255,10 +327,10 @@ const CreatePartnerPrayerScreen = ({ navigation }) => {
             uri: uploadResult.url,
             url: uploadResult.url,
           };
+          setUploadProgress(95);
           console.log("Partner prayer wallpaper uploaded successfully");
         } catch (uploadError) {
           console.warn("Error uploading partner prayer wallpaper:", uploadError.message);
-          // Continue with local URI if upload fails
         }
       }
 
@@ -271,8 +343,16 @@ const CreatePartnerPrayerScreen = ({ navigation }) => {
       };
 
       // Save to Firebase (and locally as backup)
+      setUploadStatus("Saving to database...");
+      setUploadProgress(98);
       const PartnerFirebaseService = (await import("../services/PartnerFirebaseService")).default;
       const result = await PartnerFirebaseService.savePartnerPrayer(partnerPrayer);
+
+      setUploadProgress(100);
+      setUploadStatus("Complete!");
+      
+      // Small delay to show completion
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       Alert.alert(
         "Thank You!",
@@ -286,18 +366,43 @@ const CreatePartnerPrayerScreen = ({ navigation }) => {
       );
     } catch (error) {
       console.error("Error creating partner prayer:", error);
-      Alert.alert("Error", "Failed to submit prayer. Please try again.");
+      Alert.alert("Error", "Failed to submit prayer. Please try again. " + (error.message || ""));
     } finally {
       setLoading(false);
+      setUploadProgress(0);
+      setUploadStatus("");
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <SafeAreaView style={styles.safeArea}>
+    <>
+      {/* Upload Progress Modal - Outside SafeAreaView for proper centering */}
+      <Modal
+        visible={loading}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {}} // Prevent closing during upload
+      >
+        <View style={styles.uploadModalOverlay}>
+          <View style={styles.uploadModalContent}>
+            <Text style={styles.uploadModalTitle}>Uploading Content</Text>
+            <Text style={styles.uploadModalStatus}>{uploadStatus}</Text>
+            <View style={styles.progressBarContainer}>
+              <View style={[styles.progressBar, { width: `${uploadProgress}%` }]} />
+            </View>
+            <Text style={styles.progressText}>{uploadProgress}%</Text>
+            <Text style={styles.uploadModalNote}>
+              Please wait... Do not close the app.
+            </Text>
+          </View>
+        </View>
+      </Modal>
+      
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
@@ -386,7 +491,7 @@ const CreatePartnerPrayerScreen = ({ navigation }) => {
                 <ImageBackground
                   source={
                     wallpaper.type === "asset"
-                      ? wallpaper.file
+                      ? ASSET_WALLPAPERS.find(w => w.id === wallpaper.id)?.file
                       : { uri: wallpaper.uri }
                   }
                   style={styles.wallpaperPreview}
@@ -687,6 +792,7 @@ const CreatePartnerPrayerScreen = ({ navigation }) => {
         </Modal>
       </SafeAreaView>
     </KeyboardAvoidingView>
+    </>
   );
 };
 
@@ -1073,6 +1179,67 @@ const styles = StyleSheet.create({
   },
   thumbnailOptionTextDecline: {
     color: "#666",
+  },
+  uploadModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  uploadModalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 30,
+    width: "85%",
+    maxWidth: 400,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  uploadModalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#1a365d",
+    marginBottom: 10,
+  },
+  uploadModalStatus: {
+    fontSize: 16,
+    color: "#666",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  progressBarContainer: {
+    width: "100%",
+    height: 8,
+    backgroundColor: "#e0e0e0",
+    borderRadius: 4,
+    overflow: "hidden",
+    marginBottom: 10,
+  },
+  progressBar: {
+    height: "100%",
+    backgroundColor: "#1a365d",
+    borderRadius: 4,
+  },
+  progressText: {
+    fontSize: 14,
+    color: "#1a365d",
+    fontWeight: "600",
+    marginBottom: 15,
+  },
+  uploadModalNote: {
+    fontSize: 12,
+    color: "#999",
+    textAlign: "center",
+    fontStyle: "italic",
   },
 });
 

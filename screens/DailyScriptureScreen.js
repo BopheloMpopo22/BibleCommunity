@@ -90,14 +90,29 @@ const DailyScriptureScreen = ({ navigation }) => {
           loadComments(scripture);
           
           // Get cached video URI if available, otherwise PRELOAD before allowing play
-          if (scripture?.video?.uri) {
+          // Normalize video URL - check both uri and url properties
+          const videoUrl = scripture?.video?.uri || scripture?.video?.url;
+          
+          // Skip videos with local file paths (they won't work on other devices)
+          // Only process videos with Firebase Storage URLs or HTTP/HTTPS URLs
+          const isValidVideoUrl = videoUrl && (
+            videoUrl.startsWith("https://firebasestorage.googleapis.com") ||
+            videoUrl.startsWith("http://") ||
+            videoUrl.startsWith("https://")
+          );
+          
+          if (videoUrl && !isValidVideoUrl) {
+            console.warn("[VideoCache] Skipping video with local path (not accessible on other devices):", videoUrl);
+            setCachedVideoUri(null);
+            setIsVideoReady(false);
+          } else if (isValidVideoUrl) {
             try {
-              console.log("[VideoCache] Checking cache for:", scripture.video.uri);
-              const isCached = await VideoCacheService.isCached(scripture.video.uri);
+              console.log("[VideoCache] Checking cache for:", videoUrl);
+              const isCached = await VideoCacheService.isCached(videoUrl);
               console.log("[VideoCache] Is cached?", isCached);
 
               if (isCached) {
-                const cachedPath = VideoCacheService.getCachedPath(scripture.video.uri);
+                const cachedPath = VideoCacheService.getCachedPath(videoUrl);
                 console.log("[VideoCache] ✅ Using cached video:", cachedPath);
                 setCachedVideoUri(cachedPath);
                 setIsVideoReady(true); // Cached videos are ready immediately
@@ -109,7 +124,7 @@ const DailyScriptureScreen = ({ navigation }) => {
                 // PRELOAD: Download cache BEFORE allowing play
                 try {
                   console.log("[VideoCache] Starting preload...");
-                  const cachedPath = await VideoCacheService.preCacheVideo(scripture.video.uri);
+                  const cachedPath = await VideoCacheService.preCacheVideo(videoUrl);
                   if (cachedPath) {
                     console.log("[VideoCache] ✅ Preload complete, using cached:", cachedPath);
                     setCachedVideoUri(cachedPath);
@@ -195,19 +210,26 @@ const DailyScriptureScreen = ({ navigation }) => {
             setTimeOfDay(timeOfDay);
             loadComments(newScripture);
             
-            // Get cached video URI if available
-            if (newScripture?.video?.uri) {
+            // Get cached video URI if available - normalize URL
+            const videoUrl = newScripture?.video?.uri || newScripture?.video?.url;
+            const isValidVideoUrl = videoUrl && (
+              videoUrl.startsWith("https://firebasestorage.googleapis.com") ||
+              videoUrl.startsWith("http://") ||
+              videoUrl.startsWith("https://")
+            );
+            
+            if (isValidVideoUrl) {
               try {
-                const isCached = await VideoCacheService.isCached(newScripture.video.uri);
+                const isCached = await VideoCacheService.isCached(videoUrl);
                 if (isCached) {
-                  const cachedPath = VideoCacheService.getCachedPath(newScripture.video.uri);
+                  const cachedPath = VideoCacheService.getCachedPath(videoUrl);
                   setCachedVideoUri(cachedPath);
                   setIsVideoReady(true);
                 } else {
                   setCachedVideoUri(null);
                   setIsVideoReady(false);
                   // Preload for next time
-                  VideoCacheService.preCacheVideo(newScripture.video.uri).catch((error) => {
+                  VideoCacheService.preCacheVideo(videoUrl).catch((error) => {
                     console.log("[VideoCache] Pre-cache failed:", error);
                   });
                   setTimeout(() => setIsVideoReady(true), 3000);
@@ -217,6 +239,10 @@ const DailyScriptureScreen = ({ navigation }) => {
                 setCachedVideoUri(null);
                 setIsVideoReady(true);
               }
+            } else if (videoUrl) {
+              console.warn("[VideoCache] Skipping video with local path:", videoUrl);
+              setCachedVideoUri(null);
+              setIsVideoReady(false);
             } else {
               setCachedVideoUri(null);
               setIsVideoReady(true);
@@ -242,10 +268,11 @@ const DailyScriptureScreen = ({ navigation }) => {
 
   // Update video height when video loads - ONLY set once per video, never update during playback
   const handleVideoLoad = useCallback((status) => {
-    // Reset height flag if video URI changed
-    if (scripture?.video?.uri && previousVideoUriRef.current !== scripture.video.uri) {
+    // Reset height flag if video URI changed - normalize URL (check both uri and url)
+    const videoUrl = scripture?.video?.uri || scripture?.video?.url;
+    if (videoUrl && previousVideoUriRef.current !== videoUrl) {
       videoHeightSetRef.current = false;
-      previousVideoUriRef.current = scripture.video.uri;
+      previousVideoUriRef.current = videoUrl;
     }
     
     // Only set height once per video load - never update during playback
@@ -498,7 +525,16 @@ const DailyScriptureScreen = ({ navigation }) => {
                 <View style={styles.separatorLine} />
 
                 {/* Video Box */}
-                {scripture.video && scripture.video.uri && (
+                {/* Only show video if it has a valid Firebase Storage URL or HTTP/HTTPS URL */}
+                {(() => {
+                  const videoUrl = scripture.video?.uri || scripture.video?.url;
+                  const isValidVideoUrl = videoUrl && (
+                    videoUrl.startsWith("https://firebasestorage.googleapis.com") ||
+                    videoUrl.startsWith("http://") ||
+                    videoUrl.startsWith("https://")
+                  );
+                  return isValidVideoUrl;
+                })() && (
                   <>
                     <View 
                       style={styles.videoBoxContainer}
@@ -525,10 +561,10 @@ const DailyScriptureScreen = ({ navigation }) => {
                           </View>
                         )}
                         <Video
-                          key={scripture.video.uri}
+                          key={scripture.video.uri || scripture.video.url}
                           ref={videoRef}
                           source={{
-                            uri: cachedVideoUri || scripture.video.uri,
+                            uri: cachedVideoUri || scripture.video.uri || scripture.video.url,
                           }}
                           style={[
                             styles.video,
@@ -656,7 +692,15 @@ const DailyScriptureScreen = ({ navigation }) => {
                 )}
 
                 {/* Separator Line */}
-                {(scripture.video && scripture.video.uri) && <View style={styles.separatorLine} />}
+                {(() => {
+                  const videoUrl = scripture.video?.uri || scripture.video?.url;
+                  const isValidVideoUrl = videoUrl && (
+                    videoUrl.startsWith("https://firebasestorage.googleapis.com") ||
+                    videoUrl.startsWith("http://") ||
+                    videoUrl.startsWith("https://")
+                  );
+                  return isValidVideoUrl;
+                })() && <View style={styles.separatorLine} />}
 
                 {/* Scripture Actions */}
                 <View style={styles.actionsContainer}>
@@ -751,7 +795,15 @@ const DailyScriptureScreen = ({ navigation }) => {
                 </View>
 
                 {/* Video Player */}
-                {scripture.video && scripture.video.uri && (
+                {(() => {
+                  const videoUrl = scripture.video?.uri || scripture.video?.url;
+                  const isValidVideoUrl = videoUrl && (
+                    videoUrl.startsWith("https://firebasestorage.googleapis.com") ||
+                    videoUrl.startsWith("http://") ||
+                    videoUrl.startsWith("https://")
+                  );
+                  return isValidVideoUrl;
+                })() && (
                   <View 
                     style={styles.videoBoxContainer}
                     onLayout={(event) => {
@@ -767,7 +819,7 @@ const DailyScriptureScreen = ({ navigation }) => {
                     <View style={[styles.videoContainer, { height: videoHeight }]}>
                       <Video
                         ref={videoRef}
-                        source={{ uri: scripture.video.uri }}
+                        source={{ uri: scripture.video.uri || scripture.video.url }}
                         style={styles.video}
                         resizeMode="contain"
                         shouldPlay={false}
@@ -825,7 +877,15 @@ const DailyScriptureScreen = ({ navigation }) => {
                 )}
 
                 {/* Separator Line */}
-                {(scripture.video && scripture.video.uri) && <View style={styles.separatorLine} />}
+                {(() => {
+                  const videoUrl = scripture.video?.uri || scripture.video?.url;
+                  const isValidVideoUrl = videoUrl && (
+                    videoUrl.startsWith("https://firebasestorage.googleapis.com") ||
+                    videoUrl.startsWith("http://") ||
+                    videoUrl.startsWith("https://")
+                  );
+                  return isValidVideoUrl;
+                })() && <View style={styles.separatorLine} />}
 
                 {/* Scripture Actions */}
                 <View style={styles.actionsContainer}>

@@ -101,7 +101,7 @@ class MediaService {
         mediaTypes: ImagePicker.MediaTypeOptions.Videos,
         allowsMultipleSelection: false,
         quality: 0.8,
-        videoMaxDuration: 60,
+        videoMaxDuration: 180, // 3 minutes (180 seconds)
         allowsEditing: true,
       });
 
@@ -136,7 +136,7 @@ class MediaService {
         mediaTypes: ImagePicker.MediaTypeOptions.Videos,
         allowsEditing: true,
         quality: 0.8,
-        videoMaxDuration: 60,
+        videoMaxDuration: 180, // 3 minutes (180 seconds)
       });
 
       if (!result.canceled) {
@@ -240,7 +240,7 @@ class MediaService {
   static validateMedia(mediaItem) {
     const maxImageSize = 10 * 1024 * 1024; // 10MB
     const maxVideoSize = 100 * 1024 * 1024; // 100MB
-    const maxVideoDuration = 60; // 60 seconds
+    const maxVideoDuration = 180; // 3 minutes (180 seconds)
 
     if (mediaItem.type === "image") {
       if (mediaItem.fileSize && mediaItem.fileSize > maxImageSize) {
@@ -253,7 +253,7 @@ class MediaService {
       if (mediaItem.duration && mediaItem.duration > maxVideoDuration) {
         return {
           valid: false,
-          error: "Video duration must be less than 60 seconds",
+          error: "Video duration must be 3 minutes or less",
         };
       }
     }

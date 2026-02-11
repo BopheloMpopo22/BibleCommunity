@@ -36,15 +36,15 @@ class TimeBasedPrayerService {
       const partnerPrayers = await PartnerFirebaseService.getAllPartnerPrayers();
       
       if (partnerPrayers && partnerPrayers.length > 0) {
-        const today = new Date().toDateString();
+        // Use ISO date format (YYYY-MM-DD) for consistent comparison
+        const today = new Date().toISOString().split("T")[0];
         const selectedPrayer = partnerPrayers.find(
           (prayer) =>
             prayer.time === timeOfDay &&
             prayer.isSelected === true &&
             prayer.selectedDate &&
-            (new Date(prayer.selectedDate).toDateString() === today ||
-             prayer.selectedDate === today ||
-             prayer.selectedDate.includes(today.split(" ")[1]))
+            (prayer.selectedDate === today ||
+             new Date(prayer.selectedDate).toISOString().split("T")[0] === today)
         );
         
         if (selectedPrayer) {
@@ -84,16 +84,16 @@ class TimeBasedPrayerService {
       
       if (partnerPrayersJson) {
         const partnerPrayers = JSON.parse(partnerPrayersJson);
-        const today = new Date().toDateString();
+        // Use ISO date format (YYYY-MM-DD) for consistent comparison
+        const today = new Date().toISOString().split("T")[0];
         
         const selectedPrayer = partnerPrayers.find(
           (prayer) =>
             prayer.time === timeOfDay &&
             prayer.isSelected === true &&
             prayer.selectedDate &&
-            (new Date(prayer.selectedDate).toDateString() === today ||
-             prayer.selectedDate === today ||
-             prayer.selectedDate.includes(today.split(" ")[1]))
+            (prayer.selectedDate === today ||
+             new Date(prayer.selectedDate).toISOString().split("T")[0] === today)
         );
 
         if (selectedPrayer) {
@@ -220,15 +220,15 @@ class TimeBasedPrayerService {
       const partnerScriptures = await PartnerFirebaseService.getAllPartnerScriptures();
       
       if (partnerScriptures && partnerScriptures.length > 0) {
-        const today = new Date().toDateString();
+        // Use ISO date format (YYYY-MM-DD) for consistent comparison
+        const today = new Date().toISOString().split("T")[0];
         const selectedScripture = partnerScriptures.find(
           (scripture) =>
             scripture.time === timeOfDay &&
             scripture.isSelected === true &&
             scripture.selectedDate &&
-            (new Date(scripture.selectedDate).toDateString() === today ||
-             scripture.selectedDate === today ||
-             scripture.selectedDate.includes(today.split(" ")[1]))
+            (scripture.selectedDate === today ||
+             new Date(scripture.selectedDate).toISOString().split("T")[0] === today)
         );
         
         if (selectedScripture) {
@@ -264,16 +264,16 @@ class TimeBasedPrayerService {
       
       if (partnerScripturesJson) {
         const partnerScriptures = JSON.parse(partnerScripturesJson);
-        const today = new Date().toDateString();
+        // Use ISO date format (YYYY-MM-DD) for consistent comparison
+        const today = new Date().toISOString().split("T")[0];
         
         const selectedScripture = partnerScriptures.find(
           (scripture) =>
             scripture.time === timeOfDay &&
             scripture.isSelected === true &&
             scripture.selectedDate &&
-            (new Date(scripture.selectedDate).toDateString() === today ||
-             scripture.selectedDate === today ||
-             scripture.selectedDate.includes(today.split(" ")[1]))
+            (scripture.selectedDate === today ||
+             new Date(scripture.selectedDate).toISOString().split("T")[0] === today)
         );
 
         if (selectedScripture) {

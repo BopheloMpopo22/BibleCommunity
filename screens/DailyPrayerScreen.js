@@ -172,16 +172,29 @@ const DailyPrayerScreen = ({ navigation }) => {
       loadComments(prayer);
 
       // Get cached video URI if available, otherwise PRELOAD before allowing play
-      if (prayer?.video?.uri) {
+      // Normalize video URL - check both uri and url properties
+      const videoUrl = prayer?.video?.uri || prayer?.video?.url;
+      
+      // Skip videos with local file paths (they won't work on other devices)
+      // Only process videos with Firebase Storage URLs or HTTP/HTTPS URLs
+      const isValidVideoUrl = videoUrl && (
+        videoUrl.startsWith("https://firebasestorage.googleapis.com") ||
+        videoUrl.startsWith("http://") ||
+        videoUrl.startsWith("https://")
+      );
+      
+      if (videoUrl && !isValidVideoUrl) {
+        console.warn("[VideoCache] Skipping video with local path (not accessible on other devices):", videoUrl);
+        setCachedVideoUri(null);
+        setIsVideoReady(false);
+      } else if (isValidVideoUrl) {
         try {
-          console.log("[VideoCache] Checking cache for:", prayer.video.uri);
-          const isCached = await VideoCacheService.isCached(prayer.video.uri);
+          console.log("[VideoCache] Checking cache for:", videoUrl);
+          const isCached = await VideoCacheService.isCached(videoUrl);
           console.log("[VideoCache] Is cached?", isCached);
 
           if (isCached) {
-            const cachedPath = VideoCacheService.getCachedPath(
-              prayer.video.uri
-            );
+            const cachedPath = VideoCacheService.getCachedPath(videoUrl);
             console.log("[VideoCache] ✅ Using cached video:", cachedPath);
             setCachedVideoUri(cachedPath);
             setIsVideoReady(true); // Cached videos are ready immediately
@@ -195,9 +208,7 @@ const DailyPrayerScreen = ({ navigation }) => {
             // PRELOAD: Download cache BEFORE allowing play
             try {
               console.log("[VideoCache] Starting preload...");
-              const cachedPath = await VideoCacheService.preCacheVideo(
-                prayer.video.uri
-              );
+              const cachedPath = await VideoCacheService.preCacheVideo(videoUrl);
               if (cachedPath) {
                 console.log(
                   "[VideoCache] ✅ Preload complete, using cached:",
@@ -228,6 +239,7 @@ const DailyPrayerScreen = ({ navigation }) => {
           setIsVideoReady(true); // Allow play anyway
         }
       } else {
+        // No video or invalid video URL
         setCachedVideoUri(null);
         setIsVideoReady(true);
       }
@@ -296,13 +308,11 @@ const DailyPrayerScreen = ({ navigation }) => {
   // Update video height when video loads - ONLY set once per video, never update during playback
   const handleVideoLoad = useCallback(
     (status) => {
-      // Reset height flag if video URI changed
-      if (
-        dailyPrayer?.video?.uri &&
-        previousVideoUriRef.current !== dailyPrayer.video.uri
-      ) {
+      // Reset height flag if video URI changed - normalize URL (check both uri and url)
+      const videoUrl = dailyPrayer?.video?.uri || dailyPrayer?.video?.url;
+      if (videoUrl && previousVideoUriRef.current !== videoUrl) {
         videoHeightSetRef.current = false;
-        previousVideoUriRef.current = dailyPrayer.video.uri;
+        previousVideoUriRef.current = videoUrl;
       }
 
       // Only set height once per video load - never update during playback
@@ -675,7 +685,16 @@ const DailyPrayerScreen = ({ navigation }) => {
               <View style={styles.separatorLine} />
 
               {/* Video Box */}
-              {dailyPrayer.video && dailyPrayer.video.uri && (
+              {/* Only show video if it has a valid Firebase Storage URL or HTTP/HTTPS URL */}
+              {(() => {
+                const videoUrl = dailyPrayer.video?.uri || dailyPrayer.video?.url;
+                const isValidVideoUrl = videoUrl && (
+                  videoUrl.startsWith("https://firebasestorage.googleapis.com") ||
+                  videoUrl.startsWith("http://") ||
+                  videoUrl.startsWith("https://")
+                );
+                return isValidVideoUrl;
+              })() && (
                 <>
                   <View
                     style={styles.videoBoxContainer}
@@ -709,10 +728,10 @@ const DailyPrayerScreen = ({ navigation }) => {
                         </View>
                       )}
                       <Video
-                        key={dailyPrayer.video.uri}
+                        key={dailyPrayer.video.uri || dailyPrayer.video.url}
                         ref={videoRef}
                         source={{
-                          uri: cachedVideoUri || dailyPrayer.video.uri,
+                          uri: cachedVideoUri || dailyPrayer.video.uri || dailyPrayer.video.url,
                         }}
                         style={[
                           styles.video,
@@ -729,7 +748,7 @@ const DailyPrayerScreen = ({ navigation }) => {
                           console.log("[VideoPlayback] Video load started", {
                             uri: cachedVideoUri ? "CACHED" : "NETWORK",
                             cachedUri: cachedVideoUri,
-                            originalUri: dailyPrayer.video.uri,
+                            originalUri: dailyPrayer.video.uri || dailyPrayer.video.url,
                           });
                           setIsVideoReady(false);
                         }}
@@ -1119,15 +1138,23 @@ const DailyPrayerScreen = ({ navigation }) => {
                 </View>
 
                 {/* Video Player */}
-                {dailyPrayer.video && dailyPrayer.video.uri && (
+                {(() => {
+                  const videoUrl = dailyPrayer.video?.uri || dailyPrayer.video?.url;
+                  const isValidVideoUrl = videoUrl && (
+                    videoUrl.startsWith("https://firebasestorage.googleapis.com") ||
+                    videoUrl.startsWith("http://") ||
+                    videoUrl.startsWith("https://")
+                  );
+                  return isValidVideoUrl;
+                })() && (
                   <View
                     style={[styles.videoContainer, { height: videoHeight }]}
                   >
                     {/* Thumbnails removed to test if they cause pauses */}
                     <Video
-                      key={dailyPrayer.video.uri}
+                      key={dailyPrayer.video.uri || dailyPrayer.video.url}
                       ref={videoRef}
-                      source={{ uri: dailyPrayer.video.uri }}
+                      source={{ uri: dailyPrayer.video.uri || dailyPrayer.video.url }}
                       style={styles.video}
                       resizeMode="cover"
                       shouldPlay={false}

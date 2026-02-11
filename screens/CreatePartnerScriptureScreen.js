@@ -62,7 +62,17 @@ const CreatePartnerScriptureScreen = ({ navigation }) => {
     try {
       const result = await MediaService.pickVideo();
       if (result.length > 0) {
-        setVideo(result[0]);
+        const video = result[0];
+        // Validate video duration (3 minutes max)
+        if (video.duration && video.duration > 180) {
+          Alert.alert(
+            "Video Too Long",
+            "Videos must be 3 minutes or less. Please select a shorter video.",
+            [{ text: "OK" }]
+          );
+          return;
+        }
+        setVideo(video);
         setShowVideoPicker(false);
         // After video is selected, show thumbnail picker
         setShowThumbnailPicker(true);
@@ -82,7 +92,17 @@ const CreatePartnerScriptureScreen = ({ navigation }) => {
     try {
       const result = await MediaService.recordVideo();
       if (result.length > 0) {
-        setVideo(result[0]);
+        const video = result[0];
+        // Validate video duration (3 minutes max)
+        if (video.duration && video.duration > 180) {
+          Alert.alert(
+            "Video Too Long",
+            "Videos must be 3 minutes or less. Please record a shorter video.",
+            [{ text: "OK" }]
+          );
+          return;
+        }
+        setVideo(video);
         setShowVideoPicker(false);
         // After video is selected, show thumbnail picker
         setShowThumbnailPicker(true);
@@ -228,13 +248,15 @@ const CreatePartnerScriptureScreen = ({ navigation }) => {
       }
 
       // Upload video with progress tracking (largest file)
-      if (video && video.uri && !video.uri.startsWith("https://firebasestorage.googleapis.com")) {
+      // Normalize video URL - check both uri and url properties
+      const videoUri = video?.uri || video?.url;
+      if (video && videoUri && !videoUri.startsWith("https://firebasestorage.googleapis.com")) {
         try {
           setUploadStatus("Uploading video...");
           console.log("Uploading partner scripture video to Firebase Storage...");
           
           const uploadResult = await FirebaseStorageService.uploadVideo(
-            video.uri,
+            videoUri,
             "partners/scriptures/videos",
             null,
             (progress) => {
@@ -242,18 +264,48 @@ const CreatePartnerScriptureScreen = ({ navigation }) => {
               setUploadProgress(10 + Math.round(progress * 0.7));
             }
           );
-          uploadedVideo = {
-            ...video,
-            uri: uploadResult.url,
-            url: uploadResult.url,
-            thumbnail: thumbnailUrl || uploadResult.thumbnail || video.thumbnail,
-          };
-          setUploadProgress(80);
-          console.log("Partner scripture video uploaded successfully");
+          
+          // Only set uploadedVideo if upload succeeded and we got a Firebase URL
+          if (uploadResult && uploadResult.url && uploadResult.url.startsWith("https://firebasestorage.googleapis.com")) {
+            uploadedVideo = {
+              ...video,
+              uri: uploadResult.url,
+              url: uploadResult.url,
+              thumbnail: thumbnailUrl || uploadResult.thumbnail || video.thumbnail,
+            };
+            setUploadProgress(80);
+            console.log("Partner scripture video uploaded successfully:", uploadResult.url);
+          } else {
+            throw new Error("Upload succeeded but no valid Firebase URL returned");
+          }
         } catch (uploadError) {
-          console.warn("Error uploading partner scripture video:", uploadError.message);
-          Alert.alert("Upload Warning", "Video upload failed, but continuing with submission. Error: " + uploadError.message);
+          console.error("Error uploading partner scripture video:", uploadError.message);
+          // Don't save video if upload failed - set to null so it's not saved with local path
+          uploadedVideo = null;
+          Alert.alert(
+            "Video Upload Failed", 
+            "The video could not be uploaded. Please try again or remove the video and submit without it.\n\nError: " + uploadError.message,
+            [
+              { text: "Remove Video", onPress: () => setVideo(null) },
+              { text: "Cancel", style: "cancel", onPress: () => {} }
+            ]
+          );
+          setLoading(false);
+          return; // Stop submission if video upload fails
         }
+      } else if (video && videoUri && videoUri.startsWith("https://firebasestorage.googleapis.com")) {
+        // Video already uploaded - just ensure thumbnail is set
+        uploadedVideo = {
+          ...video,
+          uri: videoUri,
+          url: videoUri,
+          thumbnail: thumbnailUrl || video.thumbnail,
+        };
+        setUploadProgress(80);
+      } else if (video && videoUri) {
+        // Video has a local path but wasn't uploaded - don't save it
+        console.warn("Video has local path but wasn't uploaded. Removing video from submission.");
+        uploadedVideo = null;
       }
 
       // Upload wallpaper last (medium size)

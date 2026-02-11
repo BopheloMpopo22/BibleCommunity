@@ -58,7 +58,17 @@ const CreatePartnerWordScreen = ({ navigation }) => {
     try {
       const result = await MediaService.pickVideo();
       if (result.length > 0) {
-        setVideo(result[0]);
+        const video = result[0];
+        // Validate video duration (3 minutes max)
+        if (video.duration && video.duration > 180) {
+          Alert.alert(
+            "Video Too Long",
+            "Videos must be 3 minutes or less. Please select a shorter video.",
+            [{ text: "OK" }]
+          );
+          return;
+        }
+        setVideo(video);
         setShowVideoPicker(false);
         // After video is selected, show thumbnail picker
         setShowThumbnailPicker(true);
@@ -78,7 +88,17 @@ const CreatePartnerWordScreen = ({ navigation }) => {
     try {
       const result = await MediaService.recordVideo();
       if (result.length > 0) {
-        setVideo(result[0]);
+        const video = result[0];
+        // Validate video duration (3 minutes max)
+        if (video.duration && video.duration > 180) {
+          Alert.alert(
+            "Video Too Long",
+            "Videos must be 3 minutes or less. Please record a shorter video.",
+            [{ text: "OK" }]
+          );
+          return;
+        }
+        setVideo(video);
         setShowVideoPicker(false);
         // After video is selected, show thumbnail picker
         setShowThumbnailPicker(true);

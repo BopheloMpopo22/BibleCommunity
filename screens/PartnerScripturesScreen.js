@@ -41,12 +41,25 @@ const PartnerScripturesScreen = ({ navigation }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
   const [filter, setFilter] = useState("all"); // all, morning, afternoon, evening
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useFocusEffect(
     React.useCallback(() => {
       loadScriptures();
+      checkAdminStatus();
     }, [])
   );
+
+  const checkAdminStatus = async () => {
+    try {
+      const AdminService = (await import("../services/AdminService")).default;
+      const adminStatus = await AdminService.isAdmin();
+      setIsAdmin(adminStatus);
+    } catch (error) {
+      console.error("Error checking admin status:", error);
+      setIsAdmin(false);
+    }
+  };
 
   const loadScriptures = async () => {
     try {
@@ -82,9 +95,52 @@ const PartnerScripturesScreen = ({ navigation }) => {
     }
   };
 
+  // Normalize date to ISO format (YYYY-MM-DD)
+  const normalizeDate = (dateString) => {
+    if (!dateString) return null;
+    const trimmed = dateString.trim();
+    // If already in ISO format (YYYY-MM-DD), return as is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return trimmed;
+    }
+    // Try to parse and convert to ISO format
+    try {
+      const date = new Date(trimmed);
+      if (!isNaN(date.getTime())) {
+        return date.toISOString().split("T")[0];
+      }
+    } catch (e) {
+      console.warn("Error parsing date:", trimmed);
+    }
+    // If parsing fails, try to extract YYYY-MM-DD from the string
+    const isoMatch = trimmed.match(/(\d{4}-\d{2}-\d{2})/);
+    if (isoMatch) {
+      return isoMatch[1];
+    }
+    return trimmed; // Fallback to original if can't parse
+  };
+
   const handleSelectDate = async () => {
     if (!selectedDate.trim()) {
       Alert.alert("Required", "Please enter a date");
+      return;
+    }
+
+    // Check if user is admin - only admin can schedule
+    const AdminService = (await import("../services/AdminService")).default;
+    const adminStatus = await AdminService.isAdmin();
+    if (!adminStatus) {
+      Alert.alert(
+        "Access Denied",
+        "Only administrators can schedule content. Please contact support if you need scheduling access."
+      );
+      return;
+    }
+
+    // Normalize date to ISO format (YYYY-MM-DD)
+    const normalizedDate = normalizeDate(selectedDate);
+    if (!normalizedDate) {
+      Alert.alert("Error", "Invalid date format. Please use YYYY-MM-DD format (e.g., 2024-12-25)");
       return;
     }
 
@@ -96,7 +152,7 @@ const PartnerScripturesScreen = ({ navigation }) => {
       try {
         const scriptureRef = doc(db, "partner_scriptures", selectedScripture.id);
         await updateDoc(scriptureRef, {
-          selectedDate: selectedDate.trim(),
+          selectedDate: normalizedDate,
           isSelected: true,
         });
         
@@ -105,7 +161,7 @@ const PartnerScripturesScreen = ({ navigation }) => {
         const q = query(
           scripturesRef,
           where("time", "==", selectedScripture.time),
-          where("selectedDate", "==", selectedDate.trim())
+          where("selectedDate", "==", normalizedDate)
         );
         const snapshot = await getDocs(q);
         const updatePromises = [];
@@ -126,14 +182,14 @@ const PartnerScripturesScreen = ({ navigation }) => {
         if (scripture.id === selectedScripture.id) {
           return {
             ...scripture,
-            selectedDate: selectedDate.trim(),
+            selectedDate: normalizedDate,
             isSelected: true,
           };
         }
         // Unselect other scriptures for the same time and date
         if (
           scripture.time === selectedScripture.time &&
-          scripture.selectedDate === selectedDate.trim() &&
+          scripture.selectedDate === normalizedDate &&
           scripture.id !== selectedScripture.id
         ) {
           return {
@@ -152,7 +208,7 @@ const PartnerScripturesScreen = ({ navigation }) => {
 
       Alert.alert(
         "Success",
-        `This scripture will be shown on ${selectedDate.trim()} for ${selectedScripture.time} scripture.`
+        `This scripture will be shown on ${normalizedDate} for ${selectedScripture.time} scripture.`
       );
     } catch (error) {
       console.error("Error selecting date:", error);
@@ -409,16 +465,19 @@ const PartnerScripturesScreen = ({ navigation }) => {
                   <Text style={styles.scriptureDate}>
                     {formatDate(scripture.selectedDate)}
                   </Text>
-                  <TouchableOpacity
-                    style={styles.selectButton}
-                    onPress={() => {
-                      setSelectedScripture(scripture);
-                      setShowDatePicker(true);
-                    }}
-                  >
-                    <Ionicons name="calendar" size={16} color="#228B22" />
-                    <Text style={styles.selectButtonText}>Select Date</Text>
-                  </TouchableOpacity>
+                  {/* Only show schedule button for admin */}
+                  {isAdmin && (
+                    <TouchableOpacity
+                      style={styles.selectButton}
+                      onPress={() => {
+                        setSelectedScripture(scripture);
+                        setShowDatePicker(true);
+                      }}
+                    >
+                      <Ionicons name="calendar" size={16} color="#228B22" />
+                      <Text style={styles.selectButtonText}>Select Date</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             );
