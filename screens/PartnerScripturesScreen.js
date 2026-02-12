@@ -150,11 +150,13 @@ const PartnerScripturesScreen = ({ navigation }) => {
       
       // Update in Firestore
       try {
+        console.log(`📅 Scheduling ${selectedScripture.time} scripture "${selectedScripture.id}" for date: ${normalizedDate}`);
         const scriptureRef = doc(db, "partner_scriptures", selectedScripture.id);
         await updateDoc(scriptureRef, {
-          selectedDate: normalizedDate,
+          selectedDate: normalizedDate, // Always save as ISO string (YYYY-MM-DD)
           isSelected: true,
         });
+        console.log(`✅ Successfully updated scripture in Firebase with selectedDate: ${normalizedDate}`);
         
         // Unselect other scriptures for the same time and date
         const scripturesRef = collection(db, "partner_scriptures");
@@ -167,14 +169,17 @@ const PartnerScripturesScreen = ({ navigation }) => {
         const updatePromises = [];
         snapshot.forEach((docSnap) => {
           if (docSnap.id !== selectedScripture.id) {
+            console.log(`  Unselecting scripture ${docSnap.id} for ${selectedScripture.time} on ${normalizedDate}`);
             updatePromises.push(updateDoc(doc(db, "partner_scriptures", docSnap.id), {
               isSelected: false,
             }));
           }
         });
         await Promise.all(updatePromises);
+        console.log(`✅ Unselected ${updatePromises.length} other scriptures for ${selectedScripture.time} on ${normalizedDate}`);
       } catch (firestoreError) {
-        console.warn("Error updating Firestore (updating local only):", firestoreError.message);
+        console.error("❌ Error updating Firestore:", firestoreError.message);
+        console.error(firestoreError.stack);
       }
       
       // Update local state

@@ -150,11 +150,13 @@ const PartnerPrayersScreen = ({ navigation }) => {
       
       // Update in Firestore
       try {
+        console.log(`📅 Scheduling ${selectedPrayer.time} prayer "${selectedPrayer.id}" for date: ${normalizedDate}`);
         const prayerRef = doc(db, "partner_prayers", selectedPrayer.id);
         await updateDoc(prayerRef, {
-          selectedDate: normalizedDate,
+          selectedDate: normalizedDate, // Always save as ISO string (YYYY-MM-DD)
           isSelected: true,
         });
+        console.log(`✅ Successfully updated prayer in Firebase with selectedDate: ${normalizedDate}`);
         
         // Unselect other prayers for the same time and date
         const prayersRef = collection(db, "partner_prayers");
@@ -167,14 +169,17 @@ const PartnerPrayersScreen = ({ navigation }) => {
         const updatePromises = [];
         snapshot.forEach((docSnap) => {
           if (docSnap.id !== selectedPrayer.id) {
+            console.log(`  Unselecting prayer ${docSnap.id} for ${selectedPrayer.time} on ${normalizedDate}`);
             updatePromises.push(updateDoc(doc(db, "partner_prayers", docSnap.id), {
               isSelected: false,
             }));
           }
         });
         await Promise.all(updatePromises);
+        console.log(`✅ Unselected ${updatePromises.length} other prayers for ${selectedPrayer.time} on ${normalizedDate}`);
       } catch (firestoreError) {
-        console.warn("Error updating Firestore (updating local only):", firestoreError.message);
+        console.error("❌ Error updating Firestore:", firestoreError.message);
+        console.error(firestoreError.stack);
       }
       
       // Update local state

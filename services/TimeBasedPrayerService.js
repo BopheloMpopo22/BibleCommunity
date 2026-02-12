@@ -61,21 +61,35 @@ class TimeBasedPrayerService {
             // Normalize selectedDate to ISO format for comparison
             let normalizedSelectedDate = prayer.selectedDate;
             try {
-              // If it's already in ISO format (YYYY-MM-DD), use as is
-              if (/^\d{4}-\d{2}-\d{2}$/.test(normalizedSelectedDate)) {
-                // Already in correct format
-              } else {
-                // Try to parse and convert to ISO format
-                const dateObj = new Date(normalizedSelectedDate);
-                if (!isNaN(dateObj.getTime())) {
-                  normalizedSelectedDate = dateObj.toISOString().split("T")[0];
+              // Handle string dates
+              if (typeof normalizedSelectedDate === 'string') {
+                // If already in ISO format (YYYY-MM-DD), use as is
+                if (/^\d{4}-\d{2}-\d{2}$/.test(normalizedSelectedDate.trim())) {
+                  normalizedSelectedDate = normalizedSelectedDate.trim();
+                } else {
+                  // Try to parse and convert to ISO format
+                  const dateObj = new Date(normalizedSelectedDate);
+                  if (!isNaN(dateObj.getTime())) {
+                    normalizedSelectedDate = dateObj.toISOString().split("T")[0];
+                  } else {
+                    console.warn(`⚠️ Could not parse prayer date: ${normalizedSelectedDate}`);
+                    return false;
+                  }
                 }
+              } else if (normalizedSelectedDate instanceof Date) {
+                // Handle Date objects
+                normalizedSelectedDate = normalizedSelectedDate.toISOString().split("T")[0];
+              } else {
+                console.warn(`⚠️ Unexpected prayer date type: ${typeof normalizedSelectedDate}, value: ${normalizedSelectedDate}`);
+                return false;
               }
             } catch (e) {
-              console.warn("Error normalizing date:", normalizedSelectedDate, e);
+              console.warn(`⚠️ Error normalizing prayer date: ${normalizedSelectedDate}`, e);
+              return false;
             }
             
             const matchesDate = normalizedSelectedDate === today;
+            console.log(`  Checking ${timeOfDay} prayer "${prayer.author}": normalizedDate=${normalizedSelectedDate}, today=${today}, matches=${matchesDate}`);
             
             if (matchesDate) {
               console.log(`✅ Found matching prayer: ${prayer.author}, date: ${normalizedSelectedDate}, today: ${today}`);
@@ -275,19 +289,37 @@ class TimeBasedPrayerService {
             // Normalize selectedDate to ISO format for comparison
             let normalizedSelectedDate = scripture.selectedDate;
             try {
-              if (/^\d{4}-\d{2}-\d{2}$/.test(normalizedSelectedDate)) {
-                // Already in correct format
-              } else {
-                const dateObj = new Date(normalizedSelectedDate);
-                if (!isNaN(dateObj.getTime())) {
-                  normalizedSelectedDate = dateObj.toISOString().split("T")[0];
+              // Handle string dates
+              if (typeof normalizedSelectedDate === 'string') {
+                // If already in ISO format (YYYY-MM-DD), use as is
+                if (/^\d{4}-\d{2}-\d{2}$/.test(normalizedSelectedDate.trim())) {
+                  normalizedSelectedDate = normalizedSelectedDate.trim();
+                } else {
+                  // Try to parse and convert to ISO format
+                  const dateObj = new Date(normalizedSelectedDate);
+                  if (!isNaN(dateObj.getTime())) {
+                    normalizedSelectedDate = dateObj.toISOString().split("T")[0];
+                  } else {
+                    console.warn(`⚠️ Could not parse scripture date: ${normalizedSelectedDate}`);
+                    return false;
+                  }
                 }
+              } else if (normalizedSelectedDate instanceof Date) {
+                // Handle Date objects
+                normalizedSelectedDate = normalizedSelectedDate.toISOString().split("T")[0];
+              } else {
+                console.warn(`⚠️ Unexpected scripture date type: ${typeof normalizedSelectedDate}, value: ${normalizedSelectedDate}`);
+                return false;
               }
             } catch (e) {
-              console.warn("Error normalizing date:", normalizedSelectedDate, e);
+              console.warn(`⚠️ Error normalizing scripture date: ${normalizedSelectedDate}`, e);
+              return false;
             }
             
-            return normalizedSelectedDate === today;
+            const matchesDate = normalizedSelectedDate === today;
+            console.log(`  Checking ${timeOfDay} scripture "${scripture.author}": normalizedDate=${normalizedSelectedDate}, today=${today}, matches=${matchesDate}`);
+            
+            return matchesDate;
           }
         );
         
@@ -383,6 +415,23 @@ class TimeBasedPrayerService {
       if (partnerWords && partnerWords.length > 0) {
         const today = new Date().toISOString().split("T")[0];
         console.log(`🔍 Looking for word scheduled for ${today}`);
+        console.log(`📋 Total partner words fetched: ${partnerWords.length}`);
+        
+        // Log all words with their scheduling status
+        partnerWords.forEach((word, index) => {
+          console.log(`  Word ${index + 1}: ${word.title || 'Untitled'} by ${word.author || 'Unknown'}`);
+          console.log(`    - isSelected: ${word.isSelected}`);
+          console.log(`    - selectedDate: ${word.selectedDate || 'none'}`);
+          console.log(`    - id: ${word.id || 'no id'}`);
+        });
+        
+        // Find words that are selected
+        const selectedWords = partnerWords.filter(w => w.isSelected === true && w.selectedDate);
+        console.log(`📅 Found ${selectedWords.length} words with isSelected=true and selectedDate`);
+        
+        selectedWords.forEach((word, index) => {
+          console.log(`  Selected word ${index + 1}: ${word.title || 'Untitled'} scheduled for ${word.selectedDate}`);
+        });
         
         const selectedWord = partnerWords.find(
           (word) => {
@@ -396,24 +445,43 @@ class TimeBasedPrayerService {
             // Normalize selectedDate to ISO format for comparison
             let normalizedSelectedDate = word.selectedDate;
             try {
-              if (/^\d{4}-\d{2}-\d{2}$/.test(normalizedSelectedDate)) {
-                // Already in correct format
-              } else {
-                const dateObj = new Date(normalizedSelectedDate);
-                if (!isNaN(dateObj.getTime())) {
-                  normalizedSelectedDate = dateObj.toISOString().split("T")[0];
+              // Handle string dates
+              if (typeof normalizedSelectedDate === 'string') {
+                // If already in ISO format (YYYY-MM-DD), use as is
+                if (/^\d{4}-\d{2}-\d{2}$/.test(normalizedSelectedDate.trim())) {
+                  normalizedSelectedDate = normalizedSelectedDate.trim();
+                } else {
+                  // Try to parse and convert to ISO format
+                  const dateObj = new Date(normalizedSelectedDate);
+                  if (!isNaN(dateObj.getTime())) {
+                    normalizedSelectedDate = dateObj.toISOString().split("T")[0];
+                  } else {
+                    console.warn(`⚠️ Could not parse date: ${normalizedSelectedDate}`);
+                    return false;
+                  }
                 }
+              } else if (normalizedSelectedDate instanceof Date) {
+                // Handle Date objects
+                normalizedSelectedDate = normalizedSelectedDate.toISOString().split("T")[0];
+              } else {
+                console.warn(`⚠️ Unexpected date type: ${typeof normalizedSelectedDate}, value: ${normalizedSelectedDate}`);
+                return false;
               }
             } catch (e) {
-              console.warn("Error normalizing date:", normalizedSelectedDate, e);
+              console.warn(`⚠️ Error normalizing date: ${normalizedSelectedDate}`, e);
+              return false;
             }
             
-            return normalizedSelectedDate === today;
+            const matchesDate = normalizedSelectedDate === today;
+            console.log(`  Checking word "${word.title || 'Untitled'}": normalizedDate=${normalizedSelectedDate}, today=${today}, matches=${matchesDate}`);
+            
+            return matchesDate;
           }
         );
         
         if (selectedWord) {
-          console.log(`✅ Using partner word from ${selectedWord.author} (Firebase)`);
+          console.log(`✅ FOUND MATCHING WORD: ${selectedWord.title || 'Untitled'} by ${selectedWord.author} (Firebase)`);
+          console.log(`   Scheduled for: ${selectedWord.selectedDate}`);
           // Also save to local cache for offline access
           try {
             const AsyncStorage = require("@react-native-async-storage/async-storage").default;
@@ -434,10 +502,15 @@ class TimeBasedPrayerService {
             author: selectedWord.author,
             isPartnerWord: true,
           };
+        } else {
+          console.log(`❌ No word found matching today's date (${today})`);
         }
+      } else {
+        console.log(`⚠️ No partner words found in Firebase`);
       }
     } catch (error) {
-      console.log("Error checking Firebase partner words:", error);
+      console.error("❌ Error checking Firebase partner words:", error);
+      console.error(error.stack);
     }
 
     // Fallback to local storage if Firebase fails

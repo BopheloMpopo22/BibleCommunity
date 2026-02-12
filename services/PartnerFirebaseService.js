@@ -292,10 +292,26 @@ class PartnerFirebaseService {
 
       querySnapshot.forEach((doc) => {
         const data = doc.data();
+        // Normalize selectedDate to ISO string format if it exists
+        let normalizedSelectedDate = data.selectedDate;
+        if (normalizedSelectedDate) {
+          if (typeof normalizedSelectedDate === 'string') {
+            // Already a string, ensure it's trimmed
+            normalizedSelectedDate = normalizedSelectedDate.trim();
+          } else if (normalizedSelectedDate.toDate && typeof normalizedSelectedDate.toDate === 'function') {
+            // Firebase Timestamp
+            normalizedSelectedDate = normalizedSelectedDate.toDate().toISOString().split("T")[0];
+          } else if (normalizedSelectedDate instanceof Date) {
+            // Date object
+            normalizedSelectedDate = normalizedSelectedDate.toISOString().split("T")[0];
+          }
+        }
+        
         prayers.push({
           id: doc.id,
           ...data,
           createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt,
+          selectedDate: normalizedSelectedDate || data.selectedDate, // Use normalized date
         });
       });
 
@@ -336,10 +352,26 @@ class PartnerFirebaseService {
 
       querySnapshot.forEach((doc) => {
         const data = doc.data();
+        // Normalize selectedDate to ISO string format if it exists
+        let normalizedSelectedDate = data.selectedDate;
+        if (normalizedSelectedDate) {
+          if (typeof normalizedSelectedDate === 'string') {
+            // Already a string, ensure it's trimmed
+            normalizedSelectedDate = normalizedSelectedDate.trim();
+          } else if (normalizedSelectedDate.toDate && typeof normalizedSelectedDate.toDate === 'function') {
+            // Firebase Timestamp
+            normalizedSelectedDate = normalizedSelectedDate.toDate().toISOString().split("T")[0];
+          } else if (normalizedSelectedDate instanceof Date) {
+            // Date object
+            normalizedSelectedDate = normalizedSelectedDate.toISOString().split("T")[0];
+          }
+        }
+        
         words.push({
           id: doc.id,
           ...data,
           createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt,
+          selectedDate: normalizedSelectedDate || data.selectedDate, // Use normalized date
         });
       });
 
@@ -379,10 +411,26 @@ class PartnerFirebaseService {
 
       querySnapshot.forEach((doc) => {
         const data = doc.data();
+        // Normalize selectedDate to ISO string format if it exists
+        let normalizedSelectedDate = data.selectedDate;
+        if (normalizedSelectedDate) {
+          if (typeof normalizedSelectedDate === 'string') {
+            // Already a string, ensure it's trimmed
+            normalizedSelectedDate = normalizedSelectedDate.trim();
+          } else if (normalizedSelectedDate.toDate && typeof normalizedSelectedDate.toDate === 'function') {
+            // Firebase Timestamp
+            normalizedSelectedDate = normalizedSelectedDate.toDate().toISOString().split("T")[0];
+          } else if (normalizedSelectedDate instanceof Date) {
+            // Date object
+            normalizedSelectedDate = normalizedSelectedDate.toISOString().split("T")[0];
+          }
+        }
+        
         scriptures.push({
           id: doc.id,
           ...data,
           createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt,
+          selectedDate: normalizedSelectedDate || data.selectedDate, // Use normalized date
         });
       });
 
@@ -479,4 +527,6 @@ class PartnerFirebaseService {
 }
 
 export default PartnerFirebaseService;
+
+
 

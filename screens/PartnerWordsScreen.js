@@ -146,11 +146,13 @@ const PartnerWordsScreen = ({ navigation }) => {
       
       // Update in Firestore
       try {
+        console.log(`📅 Scheduling word "${selectedWord.title || selectedWord.id}" for date: ${normalizedDate}`);
         const wordRef = doc(db, "partner_words", selectedWord.id);
         await updateDoc(wordRef, {
-          selectedDate: normalizedDate,
+          selectedDate: normalizedDate, // Always save as ISO string (YYYY-MM-DD)
           isSelected: true,
         });
+        console.log(`✅ Successfully updated word in Firebase with selectedDate: ${normalizedDate}`);
         
         // Unselect other words for the same date
         const wordsRef = collection(db, "partner_words");
@@ -162,14 +164,17 @@ const PartnerWordsScreen = ({ navigation }) => {
         const updatePromises = [];
         snapshot.forEach((docSnap) => {
           if (docSnap.id !== selectedWord.id) {
+            console.log(`  Unselecting word ${docSnap.id} for date ${normalizedDate}`);
             updatePromises.push(updateDoc(doc(db, "partner_words", docSnap.id), {
               isSelected: false,
             }));
           }
         });
         await Promise.all(updatePromises);
+        console.log(`✅ Unselected ${updatePromises.length} other words for date ${normalizedDate}`);
       } catch (firestoreError) {
-        console.warn("Error updating Firestore (updating local only):", firestoreError.message);
+        console.error("❌ Error updating Firestore:", firestoreError.message);
+        console.error(firestoreError.stack);
       }
       
       // Update local
