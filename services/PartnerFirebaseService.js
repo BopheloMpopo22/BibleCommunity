@@ -377,23 +377,46 @@ class PartnerFirebaseService {
 
       console.log(`📥 Fetched ${words.length} partner words from Firebase`);
       
+      // DEBUG: Log ALL words with their authors
+      words.forEach((w, i) => {
+        console.log(`  Firebase Word ${i+1}: "${w.title || 'Untitled'}" by ${w.author} (authorId: ${w.authorId || 'none'}), isSelected: ${w.isSelected}, selectedDate: ${w.selectedDate || 'none'}`);
+      });
+      
       // Log scheduled words for debugging
       const scheduledWords = words.filter(w => w.isSelected === true && w.selectedDate);
       if (scheduledWords.length > 0) {
         console.log(`📅 Found ${scheduledWords.length} scheduled words:`);
         scheduledWords.forEach(w => {
-          console.log(`  - Word by ${w.author}: scheduled for ${w.selectedDate}`);
+          console.log(`  - Word by ${w.author} (authorId: ${w.authorId}): scheduled for ${w.selectedDate}`);
         });
+      } else {
+        console.log(`⚠️ No scheduled words found in Firebase!`);
       }
 
       // Also get local words and merge (Firebase takes priority)
       const localWords = await this.getPartnerWordsLocally();
+      console.log(`📱 Found ${localWords.length} words in local storage`);
+      localWords.forEach((w, i) => {
+        console.log(`  Local Word ${i+1}: "${w.title || 'Untitled'}" by ${w.author} (authorId: ${w.authorId || 'none'}), isSelected: ${w.isSelected}, selectedDate: ${w.selectedDate || 'none'}`);
+      });
+      
       const firebaseWordIds = new Set(words.map(w => w.id));
       const uniqueLocalWords = localWords.filter(w => !firebaseWordIds.has(w.id));
+      console.log(`📊 After merge: ${uniqueLocalWords.length} unique local words (not in Firebase)`);
 
       // IMPORTANT: Firebase data takes priority - ensures scheduled content is always used
       const allWords = [...words, ...uniqueLocalWords];
       console.log(`✅ Returning ${allWords.length} total words (${words.length} from Firebase, ${uniqueLocalWords.length} from local)`);
+      
+      // DEBUG: Show alert with word count breakdown
+      try {
+        const { Alert } = require("react-native");
+        const currentUser = auth.currentUser;
+        Alert.alert(
+          "DEBUG: getAllPartnerWords",
+          `Firebase words: ${words.length}\nLocal words: ${localWords.length}\nUnique local: ${uniqueLocalWords.length}\nTotal returned: ${allWords.length}\n\nCurrent user: ${currentUser?.email || 'Not logged in'}\n\nScheduled words: ${scheduledWords.length}`
+        );
+      } catch (e) {}
       
       return allWords;
     } catch (error) {
@@ -527,6 +550,7 @@ class PartnerFirebaseService {
 }
 
 export default PartnerFirebaseService;
+
 
 
 
