@@ -60,10 +60,12 @@ service cloud.firestore {
       allow create: if request.auth != null;
       // Allow author to update/delete their own content
       // Also allow ANY authenticated user to update selectedDate and isSelected (for scheduling)
+      // as long as authorId doesn't change
       allow update: if request.auth != null && (
         (request.resource.data.authorId == request.auth.uid || resource.data.authorId == request.auth.uid) ||
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['selectedDate', 'isSelected']) && 
-         request.resource.data.authorId == resource.data.authorId)
+        (request.resource.data.authorId == resource.data.authorId && 
+         request.resource.data.selectedDate != null && 
+         request.resource.data.isSelected != null)
       );
       allow delete: if request.auth != null && (request.resource.data.authorId == request.auth.uid || resource.data.authorId == request.auth.uid);
     }
@@ -74,10 +76,12 @@ service cloud.firestore {
       allow create: if request.auth != null;
       // Allow author to update/delete their own content
       // Also allow ANY authenticated user to update selectedDate and isSelected (for scheduling)
+      // as long as authorId doesn't change
       allow update: if request.auth != null && (
         (request.resource.data.authorId == request.auth.uid || resource.data.authorId == request.auth.uid) ||
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['selectedDate', 'isSelected']) && 
-         request.resource.data.authorId == resource.data.authorId)
+        (request.resource.data.authorId == resource.data.authorId && 
+         request.resource.data.selectedDate != null && 
+         request.resource.data.isSelected != null)
       );
       allow delete: if request.auth != null && (request.resource.data.authorId == request.auth.uid || resource.data.authorId == request.auth.uid);
     }
@@ -88,10 +92,12 @@ service cloud.firestore {
       allow create: if request.auth != null;
       // Allow author to update/delete their own content
       // Also allow ANY authenticated user to update selectedDate and isSelected (for scheduling)
+      // as long as authorId doesn't change
       allow update: if request.auth != null && (
         (request.resource.data.authorId == request.auth.uid || resource.data.authorId == request.auth.uid) ||
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['selectedDate', 'isSelected']) && 
-         request.resource.data.authorId == resource.data.authorId)
+        (request.resource.data.authorId == resource.data.authorId && 
+         request.resource.data.selectedDate != null && 
+         request.resource.data.isSelected != null)
       );
       allow delete: if request.auth != null && (request.resource.data.authorId == request.auth.uid || resource.data.authorId == request.auth.uid);
     }
