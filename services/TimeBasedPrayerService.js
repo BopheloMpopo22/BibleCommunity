@@ -493,14 +493,14 @@ class TimeBasedPrayerService {
           console.log(`✅ FOUND MATCHING WORD: ${selectedWord.title || 'Untitled'} by ${selectedWord.author} (Firebase)`);
           console.log(`   Scheduled for: ${selectedWord.selectedDate}`);
           
-          // TEMPORARY: Show alert for debugging (remove after testing)
-          if (__DEV__) {
+          // TEMPORARY DEBUG: Show alert on device (remove after testing)
+          try {
             const { Alert } = require("react-native");
             Alert.alert(
-              "DEBUG: Word Found",
-              `Found scheduled word: ${selectedWord.title}\nDate: ${selectedWord.selectedDate}\nToday: ${today}\nAuthor: ${selectedWord.author}`
+              "DEBUG: Word Found ✅",
+              `Word found!\n\nTitle: ${selectedWord.title || 'Untitled'}\nDate: ${selectedWord.selectedDate}\nToday: ${today}\nAuthor: ${selectedWord.author}\n\nMatch: ${selectedWord.selectedDate === today ? 'YES' : 'NO'}`
             );
-          }
+          } catch (e) {}
           
           // Also save to local cache for offline access
           try {
