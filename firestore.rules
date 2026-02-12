@@ -58,21 +58,42 @@ service cloud.firestore {
     match /partner_prayers/{prayerId} {
       allow read: if true;
       allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && (request.resource.data.authorId == request.auth.uid || resource.data.authorId == request.auth.uid);
+      // Allow author to update/delete their own content
+      // Also allow ANY authenticated user to update selectedDate and isSelected (for scheduling)
+      allow update: if request.auth != null && (
+        (request.resource.data.authorId == request.auth.uid || resource.data.authorId == request.auth.uid) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['selectedDate', 'isSelected']) && 
+         request.resource.data.authorId == resource.data.authorId)
+      );
+      allow delete: if request.auth != null && (request.resource.data.authorId == request.auth.uid || resource.data.authorId == request.auth.uid);
     }
     
     // Partner Words collection
     match /partner_words/{wordId} {
       allow read: if true;
       allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && (request.resource.data.authorId == request.auth.uid || resource.data.authorId == request.auth.uid);
+      // Allow author to update/delete their own content
+      // Also allow ANY authenticated user to update selectedDate and isSelected (for scheduling)
+      allow update: if request.auth != null && (
+        (request.resource.data.authorId == request.auth.uid || resource.data.authorId == request.auth.uid) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['selectedDate', 'isSelected']) && 
+         request.resource.data.authorId == resource.data.authorId)
+      );
+      allow delete: if request.auth != null && (request.resource.data.authorId == request.auth.uid || resource.data.authorId == request.auth.uid);
     }
     
     // Partner Scriptures collection
     match /partner_scriptures/{scriptureId} {
       allow read: if true;
       allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && (request.resource.data.authorId == request.auth.uid || resource.data.authorId == request.auth.uid);
+      // Allow author to update/delete their own content
+      // Also allow ANY authenticated user to update selectedDate and isSelected (for scheduling)
+      allow update: if request.auth != null && (
+        (request.resource.data.authorId == request.auth.uid || resource.data.authorId == request.auth.uid) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['selectedDate', 'isSelected']) && 
+         request.resource.data.authorId == resource.data.authorId)
+      );
+      allow delete: if request.auth != null && (request.resource.data.authorId == request.auth.uid || resource.data.authorId == request.auth.uid);
     }
     
     // Comments on prayers
