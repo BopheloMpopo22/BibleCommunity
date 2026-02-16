@@ -102,15 +102,6 @@ class TimeBasedPrayerService {
         if (selectedPrayer) {
           console.log(`✅ Using partner prayer from ${selectedPrayer.author} (Firebase)`);
           
-          // TEMPORARY DEBUG: Show alert on device (remove after testing)
-          try {
-            const { Alert } = require("react-native");
-            Alert.alert(
-              "DEBUG: Prayer Found ✅",
-              `${timeOfDay} prayer found!\n\nDate: ${selectedPrayer.selectedDate}\nToday: ${today}\nAuthor: ${selectedPrayer.author}\n\nMatch: ${selectedPrayer.selectedDate === today ? 'YES' : 'NO'}`
-            );
-          } catch (e) {}
-          
           // Also save to local cache for offline access
           try {
             const AsyncStorage = require("@react-native-async-storage/async-storage").default;
@@ -493,15 +484,6 @@ class TimeBasedPrayerService {
           console.log(`✅ FOUND MATCHING WORD: ${selectedWord.title || 'Untitled'} by ${selectedWord.author} (Firebase)`);
           console.log(`   Scheduled for: ${selectedWord.selectedDate}`);
           
-          // TEMPORARY DEBUG: Show alert on device (remove after testing)
-          try {
-            const { Alert } = require("react-native");
-            Alert.alert(
-              "DEBUG: Word Found ✅",
-              `Word found!\n\nTitle: ${selectedWord.title || 'Untitled'}\nDate: ${selectedWord.selectedDate}\nToday: ${today}\nAuthor: ${selectedWord.author}\n\nMatch: ${selectedWord.selectedDate === today ? 'YES' : 'NO'}`
-            );
-          } catch (e) {}
-          
           // Also save to local cache for offline access
           try {
             const AsyncStorage = require("@react-native-async-storage/async-storage").default;
@@ -524,16 +506,6 @@ class TimeBasedPrayerService {
           };
         } else {
           console.log(`❌ No word found matching today's date (${today})`);
-          
-          // TEMPORARY: Show alert for debugging (remove after testing)
-          if (__DEV__) {
-            const { Alert } = require("react-native");
-            const scheduledWordsList = selectedWords.map(w => `- ${w.title} (${w.selectedDate})`).join('\n');
-            Alert.alert(
-              "DEBUG: No Word Found",
-              `Today: ${today}\n\nScheduled words:\n${scheduledWordsList || 'None'}\n\nTotal words: ${partnerWords.length}`
-            );
-          }
         }
       } else {
         console.log(`⚠️ No partner words found in Firebase`);

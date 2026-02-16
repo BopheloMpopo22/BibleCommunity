@@ -190,6 +190,7 @@ function TabNavigator() {
   const { isScrolling } = useScroll();
   return (
     <Tab.Navigator
+      initialRouteName="Prayer"
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;

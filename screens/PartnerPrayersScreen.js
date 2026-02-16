@@ -148,73 +148,117 @@ const PartnerPrayersScreen = ({ navigation }) => {
       const { doc, updateDoc, getDocs, query, where, collection } = await import("firebase/firestore");
       const { db } = await import("../config/firebase");
       
-      // Update in Firestore
-      try {
-        console.log(`📅 Scheduling ${selectedPrayer.time} prayer "${selectedPrayer.id}" for date: ${normalizedDate}`);
-        const prayerRef = doc(db, "partner_prayers", selectedPrayer.id);
-        await updateDoc(prayerRef, {
-          selectedDate: normalizedDate, // Always save as ISO string (YYYY-MM-DD)
-          isSelected: true,
-        });
-        console.log(`✅ Successfully updated prayer in Firebase with selectedDate: ${normalizedDate}`);
-        
-        // Unselect other prayers for the same time and date
-        const prayersRef = collection(db, "partner_prayers");
-        const q = query(
-          prayersRef,
-          where("time", "==", selectedPrayer.time),
-          where("selectedDate", "==", normalizedDate)
-        );
-        const snapshot = await getDocs(q);
-        const updatePromises = [];
-        snapshot.forEach((docSnap) => {
-          if (docSnap.id !== selectedPrayer.id) {
-            console.log(`  Unselecting prayer ${docSnap.id} for ${selectedPrayer.time} on ${normalizedDate}`);
-            updatePromises.push(updateDoc(doc(db, "partner_prayers", docSnap.id), {
-              isSelected: false,
-            }));
-          }
-        });
-        await Promise.all(updatePromises);
-        console.log(`✅ Unselected ${updatePromises.length} other prayers for ${selectedPrayer.time} on ${normalizedDate}`);
-      } catch (firestoreError) {
-        console.error("❌ Error updating Firestore:", firestoreError.message);
-        console.error(firestoreError.stack);
-      }
-      
-      // Update local state
-      const updatedPrayers = prayers.map((prayer) => {
-        if (prayer.id === selectedPrayer.id) {
-          return {
-            ...prayer,
-            selectedDate: normalizedDate,
-            isSelected: true,
-          };
+      // Check for existing scheduled prayer for the same time and date
+      const prayersRef = collection(db, "partner_prayers");
+      const checkQuery = query(
+        prayersRef,
+        where("time", "==", selectedPrayer.time),
+        where("selectedDate", "==", normalizedDate),
+        where("isSelected", "==", true)
+      );
+      const checkSnapshot = await getDocs(checkQuery);
+      const existingPrayers = [];
+      checkSnapshot.forEach((docSnap) => {
+        if (docSnap.id !== selectedPrayer.id) {
+          const data = docSnap.data();
+          existingPrayers.push({
+            id: docSnap.id,
+            author: data.author || "Unknown",
+            title: data.prayer?.substring(0, 50) || "Untitled",
+          });
         }
-        // Unselect other prayers for the same time and date
-        if (
-          prayer.time === selectedPrayer.time &&
-          prayer.selectedDate === normalizedDate &&
-          prayer.id !== selectedPrayer.id
-        ) {
-          return {
-            ...prayer,
-            isSelected: false,
-          };
-        }
-        return prayer;
       });
 
-      await AsyncStorage.setItem("partner_prayers", JSON.stringify(updatedPrayers));
-      setPrayers(updatedPrayers);
-      setShowDatePicker(false);
-      setSelectedPrayer(null);
-      setSelectedDate("");
+      // If there's a clash, warn the user
+      if (existingPrayers.length > 0) {
+        const existingInfo = existingPrayers.map(p => `- ${p.title} by ${p.author}`).join('\n');
+        Alert.alert(
+          "Schedule Conflict",
+          `There is already a ${selectedPrayer.time} prayer scheduled for ${normalizedDate}:\n\n${existingInfo}\n\nThis will be replaced. Continue?`,
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Replace",
+              onPress: async () => {
+                await performScheduleUpdate();
+              },
+            },
+          ]
+        );
+        return;
+      }
 
-      Alert.alert(
-        "Success",
-        `This prayer will be shown on ${normalizedDate} for ${selectedPrayer.time} prayer.`
-      );
+      // No clash, proceed with scheduling
+      await performScheduleUpdate();
+
+      async function performScheduleUpdate() {
+        // Update in Firestore
+        try {
+          console.log(`📅 Scheduling ${selectedPrayer.time} prayer "${selectedPrayer.id}" for date: ${normalizedDate}`);
+          const prayerRef = doc(db, "partner_prayers", selectedPrayer.id);
+          await updateDoc(prayerRef, {
+            selectedDate: normalizedDate, // Always save as ISO string (YYYY-MM-DD)
+            isSelected: true,
+          });
+          console.log(`✅ Successfully updated prayer in Firebase with selectedDate: ${normalizedDate}`);
+          
+          // Unselect other prayers for the same time and date
+          const q = query(
+            prayersRef,
+            where("time", "==", selectedPrayer.time),
+            where("selectedDate", "==", normalizedDate)
+          );
+          const snapshot = await getDocs(q);
+          const updatePromises = [];
+          snapshot.forEach((docSnap) => {
+            if (docSnap.id !== selectedPrayer.id) {
+              console.log(`  Unselecting prayer ${docSnap.id} for ${selectedPrayer.time} on ${normalizedDate}`);
+              updatePromises.push(updateDoc(doc(db, "partner_prayers", docSnap.id), {
+                isSelected: false,
+              }));
+            }
+          });
+          await Promise.all(updatePromises);
+          console.log(`✅ Unselected ${updatePromises.length} other prayers for ${selectedPrayer.time} on ${normalizedDate}`);
+        } catch (firestoreError) {
+          console.error("❌ Error updating Firestore:", firestoreError.message);
+          console.error(firestoreError.stack);
+        }
+        
+        // Update local state
+        const updatedPrayers = prayers.map((prayer) => {
+          if (prayer.id === selectedPrayer.id) {
+            return {
+              ...prayer,
+              selectedDate: normalizedDate,
+              isSelected: true,
+            };
+          }
+          // Unselect other prayers for the same time and date
+          if (
+            prayer.time === selectedPrayer.time &&
+            prayer.selectedDate === normalizedDate &&
+            prayer.id !== selectedPrayer.id
+          ) {
+            return {
+              ...prayer,
+              isSelected: false,
+            };
+          }
+          return prayer;
+        });
+
+        await AsyncStorage.setItem("partner_prayers", JSON.stringify(updatedPrayers));
+        setPrayers(updatedPrayers);
+        setShowDatePicker(false);
+        setSelectedPrayer(null);
+        setSelectedDate("");
+
+        Alert.alert(
+          "Success",
+          `This prayer will be shown on ${normalizedDate} for ${selectedPrayer.time} prayer.`
+        );
+      }
     } catch (error) {
       console.error("Error selecting date:", error);
       Alert.alert("Error", "Failed to set date. Please try again.");

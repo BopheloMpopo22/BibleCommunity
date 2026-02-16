@@ -148,73 +148,117 @@ const PartnerScripturesScreen = ({ navigation }) => {
       const { doc, updateDoc, getDocs, query, where, collection } = await import("firebase/firestore");
       const { db } = await import("../config/firebase");
       
-      // Update in Firestore
-      try {
-        console.log(`📅 Scheduling ${selectedScripture.time} scripture "${selectedScripture.id}" for date: ${normalizedDate}`);
-        const scriptureRef = doc(db, "partner_scriptures", selectedScripture.id);
-        await updateDoc(scriptureRef, {
-          selectedDate: normalizedDate, // Always save as ISO string (YYYY-MM-DD)
-          isSelected: true,
-        });
-        console.log(`✅ Successfully updated scripture in Firebase with selectedDate: ${normalizedDate}`);
-        
-        // Unselect other scriptures for the same time and date
-        const scripturesRef = collection(db, "partner_scriptures");
-        const q = query(
-          scripturesRef,
-          where("time", "==", selectedScripture.time),
-          where("selectedDate", "==", normalizedDate)
-        );
-        const snapshot = await getDocs(q);
-        const updatePromises = [];
-        snapshot.forEach((docSnap) => {
-          if (docSnap.id !== selectedScripture.id) {
-            console.log(`  Unselecting scripture ${docSnap.id} for ${selectedScripture.time} on ${normalizedDate}`);
-            updatePromises.push(updateDoc(doc(db, "partner_scriptures", docSnap.id), {
-              isSelected: false,
-            }));
-          }
-        });
-        await Promise.all(updatePromises);
-        console.log(`✅ Unselected ${updatePromises.length} other scriptures for ${selectedScripture.time} on ${normalizedDate}`);
-      } catch (firestoreError) {
-        console.error("❌ Error updating Firestore:", firestoreError.message);
-        console.error(firestoreError.stack);
-      }
-      
-      // Update local state
-      const updatedScriptures = scriptures.map((scripture) => {
-        if (scripture.id === selectedScripture.id) {
-          return {
-            ...scripture,
-            selectedDate: normalizedDate,
-            isSelected: true,
-          };
+      // Check for existing scheduled scripture for the same time and date
+      const scripturesRef = collection(db, "partner_scriptures");
+      const checkQuery = query(
+        scripturesRef,
+        where("time", "==", selectedScripture.time),
+        where("selectedDate", "==", normalizedDate),
+        where("isSelected", "==", true)
+      );
+      const checkSnapshot = await getDocs(checkQuery);
+      const existingScriptures = [];
+      checkSnapshot.forEach((docSnap) => {
+        if (docSnap.id !== selectedScripture.id) {
+          const data = docSnap.data();
+          existingScriptures.push({
+            id: docSnap.id,
+            author: data.author || "Unknown",
+            reference: data.reference || "Untitled",
+          });
         }
-        // Unselect other scriptures for the same time and date
-        if (
-          scripture.time === selectedScripture.time &&
-          scripture.selectedDate === normalizedDate &&
-          scripture.id !== selectedScripture.id
-        ) {
-          return {
-            ...scripture,
-            isSelected: false,
-          };
-        }
-        return scripture;
       });
 
-      await AsyncStorage.setItem("partner_scriptures", JSON.stringify(updatedScriptures));
-      setScriptures(updatedScriptures);
-      setShowDatePicker(false);
-      setSelectedScripture(null);
-      setSelectedDate("");
+      // If there's a clash, warn the user
+      if (existingScriptures.length > 0) {
+        const existingInfo = existingScriptures.map(s => `- ${s.reference} by ${s.author}`).join('\n');
+        Alert.alert(
+          "Schedule Conflict",
+          `There is already a ${selectedScripture.time} scripture scheduled for ${normalizedDate}:\n\n${existingInfo}\n\nThis will be replaced. Continue?`,
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Replace",
+              onPress: async () => {
+                await performScheduleUpdate();
+              },
+            },
+          ]
+        );
+        return;
+      }
 
-      Alert.alert(
-        "Success",
-        `This scripture will be shown on ${normalizedDate} for ${selectedScripture.time} scripture.`
-      );
+      // No clash, proceed with scheduling
+      await performScheduleUpdate();
+
+      async function performScheduleUpdate() {
+        // Update in Firestore
+        try {
+          console.log(`📅 Scheduling ${selectedScripture.time} scripture "${selectedScripture.id}" for date: ${normalizedDate}`);
+          const scriptureRef = doc(db, "partner_scriptures", selectedScripture.id);
+          await updateDoc(scriptureRef, {
+            selectedDate: normalizedDate, // Always save as ISO string (YYYY-MM-DD)
+            isSelected: true,
+          });
+          console.log(`✅ Successfully updated scripture in Firebase with selectedDate: ${normalizedDate}`);
+          
+          // Unselect other scriptures for the same time and date
+          const q = query(
+            scripturesRef,
+            where("time", "==", selectedScripture.time),
+            where("selectedDate", "==", normalizedDate)
+          );
+          const snapshot = await getDocs(q);
+          const updatePromises = [];
+          snapshot.forEach((docSnap) => {
+            if (docSnap.id !== selectedScripture.id) {
+              console.log(`  Unselecting scripture ${docSnap.id} for ${selectedScripture.time} on ${normalizedDate}`);
+              updatePromises.push(updateDoc(doc(db, "partner_scriptures", docSnap.id), {
+                isSelected: false,
+              }));
+            }
+          });
+          await Promise.all(updatePromises);
+          console.log(`✅ Unselected ${updatePromises.length} other scriptures for ${selectedScripture.time} on ${normalizedDate}`);
+        } catch (firestoreError) {
+          console.error("❌ Error updating Firestore:", firestoreError.message);
+          console.error(firestoreError.stack);
+        }
+        
+        // Update local state
+        const updatedScriptures = scriptures.map((scripture) => {
+          if (scripture.id === selectedScripture.id) {
+            return {
+              ...scripture,
+              selectedDate: normalizedDate,
+              isSelected: true,
+            };
+          }
+          // Unselect other scriptures for the same time and date
+          if (
+            scripture.time === selectedScripture.time &&
+            scripture.selectedDate === normalizedDate &&
+            scripture.id !== selectedScripture.id
+          ) {
+            return {
+              ...scripture,
+              isSelected: false,
+            };
+          }
+          return scripture;
+        });
+
+        await AsyncStorage.setItem("partner_scriptures", JSON.stringify(updatedScriptures));
+        setScriptures(updatedScriptures);
+        setShowDatePicker(false);
+        setSelectedScripture(null);
+        setSelectedDate("");
+
+        Alert.alert(
+          "Success",
+          `This scripture will be shown on ${normalizedDate} for ${selectedScripture.time} scripture.`
+        );
+      }
     } catch (error) {
       console.error("Error selecting date:", error);
       Alert.alert("Error", "Failed to set date. Please try again.");
