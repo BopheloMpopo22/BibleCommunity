@@ -317,11 +317,9 @@ const CreateMeditationScreen = ({ navigation }) => {
         uses: 0,
       };
 
-      // Save to AsyncStorage (in production, this would go to Firestore)
-      const existingMeditations = await AsyncStorage.getItem("user_meditations");
-      const meditations = existingMeditations ? JSON.parse(existingMeditations) : [];
-      meditations.push(meditation);
-      await AsyncStorage.setItem("user_meditations", JSON.stringify(meditations));
+      // Save to Firebase (and locally as backup)
+      const MeditationFirebaseService = (await import("../services/MeditationFirebaseService")).default;
+      const result = await MeditationFirebaseService.saveMeditation(meditation);
 
       Alert.alert(
         "Success!",
@@ -721,6 +719,9 @@ const CreateMeditationScreen = ({ navigation }) => {
               </View>
               <ScrollView>
                 <Text style={styles.modalSectionTitle}>Built-in Music</Text>
+                <Text style={styles.modalSectionDescription}>
+                  Pre-loaded music from our library
+                </Text>
                 {BUILT_IN_MUSIC.map((music) => (
                   <TouchableOpacity
                     key={music.id}
@@ -728,17 +729,29 @@ const CreateMeditationScreen = ({ navigation }) => {
                     onPress={() => selectMusicFromBuiltIn(music)}
                   >
                     <Ionicons name="musical-notes" size={24} color="#1a365d" />
-                    <Text style={styles.musicOptionText}>{music.name}</Text>
+                    <View style={styles.musicOptionTextContainer}>
+                      <Text style={styles.musicOptionText}>{music.name}</Text>
+                      <Text style={styles.musicOptionDescription}>{music.description}</Text>
+                    </View>
                   </TouchableOpacity>
                 ))}
                 <Text style={styles.modalSectionTitle}>From Phone</Text>
+                <Text style={styles.modalSectionDescription}>
+                  Select an audio file from your device
+                </Text>
+                <View style={styles.formatInfoBox}>
+                  <Ionicons name="information-circle" size={20} color="#1a365d" />
+                  <Text style={styles.formatInfoText}>
+                    Supported formats: MP3, M4A, WAV, AAC, OGG, FLAC
+                  </Text>
+                </View>
                 <TouchableOpacity
                   style={styles.phoneOption}
                   onPress={selectMusicFromPhone}
                 >
                   <Ionicons name="musical-notes" size={24} color="#1a365d" />
                   <Text style={styles.phoneOptionText}>
-                    Choose from Phone
+                    Choose Audio File from Phone
                   </Text>
                 </TouchableOpacity>
               </ScrollView>
@@ -1209,10 +1222,43 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
   },
+  musicOptionTextContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
   musicOptionText: {
     fontSize: 16,
     color: "#1a365d",
-    marginLeft: 12,
+    fontWeight: "600",
+  },
+  musicOptionDescription: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 2,
+  },
+  modalSectionDescription: {
+    fontSize: 12,
+    color: "#666",
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    fontStyle: "italic",
+  },
+  formatInfoBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f0f7ff",
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#cce5ff",
+  },
+  formatInfoText: {
+    fontSize: 12,
+    color: "#1a365d",
+    marginLeft: 8,
+    flex: 1,
   },
   themeOption: {
     padding: 16,

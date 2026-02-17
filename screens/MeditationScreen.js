@@ -356,20 +356,23 @@ const MeditationScreen = ({ navigation }) => {
     };
   };
 
-  // Load user-created meditations
+  // Load user-created meditations from Firebase (and local backup)
   const loadUserMeditations = async () => {
     try {
-      const meditationsJson = await AsyncStorage.getItem("user_meditations");
-      if (meditationsJson) {
-        const meditations = JSON.parse(meditationsJson);
-        console.log("Loaded user meditations:", meditations.length);
-        
+      // Load from Firebase first (prioritizes Firebase, merges with local)
+      const MeditationFirebaseService = (await import("../services/MeditationFirebaseService")).default;
+      const meditations = await MeditationFirebaseService.getAllMeditations();
+      
+      console.log("Loaded user meditations:", meditations.length);
+      
+      if (meditations.length > 0) {
         // Convert to category format
         const convertedMeditations = meditations.map(convertUserMeditationToCategory);
         setUserMeditations(convertedMeditations);
         
-        // Combine with default categories
-        setAllCategories([...meditationCategories, ...convertedMeditations]);
+        // Combine with default categories - NEWEST USER MEDITATIONS FIRST
+        // Sort: newest user meditations first, then default categories
+        setAllCategories([...convertedMeditations, ...meditationCategories]);
       } else {
         // No user meditations, just use defaults
         setUserMeditations([]);
@@ -377,8 +380,29 @@ const MeditationScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error("Error loading user meditations:", error);
-      setUserMeditations([]);
-      setAllCategories(meditationCategories);
+      // Fallback to local storage
+      try {
+        const meditationsJson = await AsyncStorage.getItem("user_meditations");
+        if (meditationsJson) {
+          const meditations = JSON.parse(meditationsJson);
+          // Sort by date (newest first)
+          meditations.sort((a, b) => {
+            const dateA = new Date(a.timestamp || a.createdAt || 0);
+            const dateB = new Date(b.timestamp || b.createdAt || 0);
+            return dateB - dateA;
+          });
+          const convertedMeditations = meditations.map(convertUserMeditationToCategory);
+          setUserMeditations(convertedMeditations);
+          setAllCategories([...convertedMeditations, ...meditationCategories]);
+        } else {
+          setUserMeditations([]);
+          setAllCategories(meditationCategories);
+        }
+      } catch (fallbackError) {
+        console.error("Error loading from local storage:", fallbackError);
+        setUserMeditations([]);
+        setAllCategories(meditationCategories);
+      }
     }
   };
 

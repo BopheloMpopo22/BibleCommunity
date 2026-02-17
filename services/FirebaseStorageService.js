@@ -214,6 +214,43 @@ class FirebaseStorageService {
   }
 
   /**
+   * Upload an audio file to Firebase Storage
+   * @param {string} audioUri - Local file URI (file:// or content://)
+   * @param {string} path - Storage path (e.g., "meditations/music")
+   * @param {string} fileName - Optional custom filename, otherwise generates one
+   * @returns {Promise<{url: string, path: string}>} Download URL and storage path
+   */
+  static async uploadAudio(audioUri, path = "meditations/music", fileName = null) {
+    try {
+      // Generate unique filename if not provided
+      const uniqueFileName =
+        fileName ||
+        `audio_${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`;
+      const storagePath = `${path}/${uniqueFileName}`;
+      const storageRef = ref(storage, storagePath);
+
+      // Read file as blob
+      const response = await fetch(audioUri);
+      const blob = await response.blob();
+
+      // Upload to Firebase Storage
+      await uploadBytes(storageRef, blob);
+
+      // Get download URL
+      const downloadURL = await getDownloadURL(storageRef);
+
+      return {
+        url: downloadURL,
+        path: storagePath,
+        type: "audio",
+      };
+    } catch (error) {
+      console.error("Error uploading audio to Firebase Storage:", error);
+      throw new Error(`Failed to upload audio: ${error.message}`);
+    }
+  }
+
+  /**
    * Upload media (images and/or videos) for a post or prayer
    * @param {Object} mediaData - Object with images and/or videos arrays
    * @param {string} type - "post", "prayer", or "prayer_request"
