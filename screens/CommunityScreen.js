@@ -232,11 +232,17 @@ const CommunityScreen = ({ navigation }) => {
       const combined = [...communities, ...newCommunities];
       console.log(`📋 Total communities to display: ${combined.length}`);
 
-      // Sort by member count (trending)
-      combined.sort(
-        (a, b) =>
-          (b.memberCount || b.members || 0) - (a.memberCount || a.members || 0)
-      );
+      // Sort by creation date (newest first), then by member count (trending)
+      combined.sort((a, b) => {
+        // First, sort by creation date (newest first)
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (dateB !== dateA) {
+          return dateB - dateA; // Newest first
+        }
+        // If dates are equal (or both missing), sort by member count
+        return (b.memberCount || b.members || 0) - (a.memberCount || a.members || 0);
+      });
 
       setTrendingCommunities(combined);
       console.log("✅ Communities loaded and set in state");

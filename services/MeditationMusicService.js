@@ -73,7 +73,8 @@ async function fetchUrlForTrack(track) {
 class MeditationMusicService {
   static async getUrlMap() {
     const cached = await getCachedUrlMap();
-    const hasAll = !!cached?.zen-wind; // quick sanity check (keys are track ids)
+    // Check if cache has at least one track URL (use bracket notation for track IDs with hyphens)
+    const hasAll = cached && (cached["zen-wind"] || cached["heavenly-energy"] || cached["inner-peace"]);
     if (cached && hasAll) return cached;
 
     const urls = {};
@@ -111,6 +112,8 @@ class MeditationMusicService {
 }
 
 export default MeditationMusicService;
+
+
 
 
 
