@@ -19,8 +19,6 @@ import * as ImagePicker from "expo-image-picker";
 import MediaService from "../services/MediaService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import WorkingAuthService from "../services/WorkingAuthService";
-import { MEDITATION_MUSIC_CATALOG } from "../services/MeditationMusicService";
-
 // Available images from assets
 const ASSET_IMAGES = [
   { id: "field-1920", name: "Field", file: require("../assets/field-3629120_1920.jpg") },
@@ -36,10 +34,6 @@ const ASSET_IMAGES = [
   { id: "peace-cover", name: "Peace Cover", file: require("../assets/Peace Cover letter.jpg") },
   { id: "background", name: "Meditation Background", file: require("../assets/Background of meditaton screen..jpg") },
 ];
-
-// Built-in music is loaded from Firebase Storage at runtime (NOT bundled in the app)
-// to keep the Play Store compressed download size under 200MB.
-const BUILT_IN_MUSIC = MEDITATION_MUSIC_CATALOG;
 
 // Suggested themes
 const SUGGESTED_THEMES = [
@@ -79,10 +73,8 @@ const CreateMeditationScreen = ({ navigation }) => {
   const [coverImage, setCoverImage] = useState(null);
   const [selectedImages, setSelectedImages] = useState([]);
   const [selectedVideo, setSelectedVideo] = useState(null); // Video support
-  const [selectedMusic, setSelectedMusic] = useState(null);
   const [selectedColor, setSelectedColor] = useState(null);
   const [showImagePicker, setShowImagePicker] = useState(false);
-  const [showMusicPicker, setShowMusicPicker] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -168,62 +160,7 @@ const CreateMeditationScreen = ({ navigation }) => {
     }
   };
 
-  const selectMusicFromBuiltIn = (music) => {
-    setSelectedMusic({
-      type: "remote",
-      id: music.id,
-      storagePath: music.storagePath,
-    });
-    setShowMusicPicker(false);
-  };
-
-  const selectMusicFromPhone = async () => {
-    try {
-      // Request permissions
-      const permissions = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (permissions.status !== "granted") {
-        Alert.alert("Permission Required", "Please grant media library access to select music files.");
-        return;
-      }
-
-      // Use ImagePicker with All media types to allow audio file selection
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.All, // This includes audio files
-        allowsMultipleSelection: false,
-        quality: 1,
-      });
-
-      if (!result.canceled && result.assets.length > 0) {
-        const asset = result.assets[0];
-        
-        // Check if it's an audio file (by extension or mime type)
-        const uri = asset.uri;
-        const isAudio = uri.match(/\.(mp3|m4a|wav|aac|ogg|flac)$/i) || 
-                       asset.mimeType?.startsWith('audio/');
-        
-        if (isAudio) {
-          setSelectedMusic({
-            type: "phone",
-            uri: uri,
-            fileName: asset.fileName || `audio_${Date.now()}.mp3`,
-          });
-          setShowMusicPicker(false);
-        } else {
-          Alert.alert(
-            "Invalid File",
-            "Please select an audio file (MP3, M4A, WAV, etc.)"
-          );
-        }
-      }
-    } catch (error) {
-      console.error("Error picking music:", error);
-      Alert.alert("Error", error.message || "Failed to pick music file");
-    }
-  };
-
-  const removeMusic = () => {
-    setSelectedMusic(null);
-  };
+  // Music functionality removed - slideshows don't use music
 
   const selectTheme = (theme) => {
     setSelectedTheme(theme);
@@ -243,10 +180,10 @@ const CreateMeditationScreen = ({ navigation }) => {
 
   const handleSubmit = async () => {
     // Validation
-    if (!meditationTitle.trim()) {
-      Alert.alert("Required", "Please enter a meditation title");
-      return;
-    }
+      if (!meditationTitle.trim()) {
+        Alert.alert("Required", "Please enter a topic title");
+        return;
+      }
 
     if (!selectedTheme && !customTheme.trim()) {
       Alert.alert("Required", "Please select or create a theme");
@@ -271,7 +208,7 @@ const CreateMeditationScreen = ({ navigation }) => {
     try {
       const currentUser = WorkingAuthService.getCurrentUser();
       if (!currentUser) {
-        Alert.alert("Error", "Please sign in to create a meditation");
+        Alert.alert("Error", "Please sign in to create a slideshow");
         return;
       }
 
@@ -306,8 +243,7 @@ const CreateMeditationScreen = ({ navigation }) => {
         })),
         coverImage: coverImage,
         images: selectedImages,
-        video: uploadedVideo, // Add video support
-        music: selectedMusic,
+        video: uploadedVideo, // Video support for slideshow background
         backgroundColor: selectedColor?.color || null,
         author: currentUser.displayName || "Anonymous",
         authorId: currentUser.uid,
@@ -333,7 +269,7 @@ const CreateMeditationScreen = ({ navigation }) => {
       );
     } catch (error) {
       console.error("Error creating meditation:", error);
-      Alert.alert("Error", "Failed to create meditation. Please try again.");
+      Alert.alert("Error", "Failed to create slideshow. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -353,7 +289,7 @@ const CreateMeditationScreen = ({ navigation }) => {
           >
             <Ionicons name="arrow-back" size={24} color="#1a365d" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Create Meditation</Text>
+          <Text style={styles.headerTitle}>Create Slideshow</Text>
           <TouchableOpacity
             style={styles.submitButton}
             onPress={handleSubmit}
@@ -374,18 +310,17 @@ const CreateMeditationScreen = ({ navigation }) => {
           <View style={styles.headingSection}>
             <Ionicons name="heart" size={32} color="#1a365d" />
             <Text style={styles.headingTitle}>
-              Create Meditations & Devotions
+              Create Scripture Slideshow
             </Text>
             <Text style={styles.headingText}>
-              Share your spiritual insights and create meditations that thousands
-              of users will use daily. Contribute to the blessing of others
-              through your devotion.
+              Share scriptures about a topic and create beautiful slideshows that thousands
+              of users will enjoy. Contribute to the blessing of others through your devotion.
             </Text>
           </View>
 
           {/* Title Input */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Meditation Title</Text>
+            <Text style={styles.sectionLabel}>Topic Title</Text>
             <TextInput
               style={styles.titleInput}
               placeholder="Enter a meaningful title..."
@@ -606,31 +541,7 @@ const CreateMeditationScreen = ({ navigation }) => {
             )}
           </View>
 
-          {/* Music Selection */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Background Music</Text>
-            {selectedMusic ? (
-              <View style={styles.musicSelectedContainer}>
-                <Ionicons name="musical-notes" size={24} color="#1a365d" />
-                <Text style={styles.musicSelectedText}>
-                  {selectedMusic.type === "remote"
-                    ? BUILT_IN_MUSIC.find((m) => m.id === selectedMusic.id)?.name
-                    : "Custom Music"}
-                </Text>
-                <TouchableOpacity onPress={removeMusic}>
-                  <Ionicons name="close-circle" size={24} color="#ff6b6b" />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.addImageButton}
-                onPress={() => setShowMusicPicker(true)}
-              >
-                <Ionicons name="musical-notes" size={24} color="#1a365d" />
-                <Text style={styles.addImageButtonText}>Select Music</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          {/* Music removed - slideshows don't use music */}
 
           {/* Background Color */}
           <View style={styles.section}>
@@ -702,62 +613,7 @@ const CreateMeditationScreen = ({ navigation }) => {
           </View>
         </Modal>
 
-        {/* Music Picker Modal */}
-        <Modal
-          visible={showMusicPicker}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setShowMusicPicker(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Select Music</Text>
-                <TouchableOpacity onPress={() => setShowMusicPicker(false)}>
-                  <Ionicons name="close" size={24} color="#1a365d" />
-                </TouchableOpacity>
-              </View>
-              <ScrollView>
-                <Text style={styles.modalSectionTitle}>Built-in Music</Text>
-                <Text style={styles.modalSectionDescription}>
-                  Pre-loaded music from our library
-                </Text>
-                {BUILT_IN_MUSIC.map((music) => (
-                  <TouchableOpacity
-                    key={music.id}
-                    style={styles.musicOption}
-                    onPress={() => selectMusicFromBuiltIn(music)}
-                  >
-                    <Ionicons name="musical-notes" size={24} color="#1a365d" />
-                    <View style={styles.musicOptionTextContainer}>
-                      <Text style={styles.musicOptionText}>{music.name}</Text>
-                      <Text style={styles.musicOptionDescription}>{music.description}</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-                <Text style={styles.modalSectionTitle}>From Phone</Text>
-                <Text style={styles.modalSectionDescription}>
-                  Select an audio file from your device
-                </Text>
-                <View style={styles.formatInfoBox}>
-                  <Ionicons name="information-circle" size={20} color="#1a365d" />
-                  <Text style={styles.formatInfoText}>
-                    Supported formats: MP3, M4A, WAV, AAC, OGG, FLAC
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.phoneOption}
-                  onPress={selectMusicFromPhone}
-                >
-                  <Ionicons name="musical-notes" size={24} color="#1a365d" />
-                  <Text style={styles.phoneOptionText}>
-                    Choose Audio File from Phone
-                  </Text>
-                </TouchableOpacity>
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
+        {/* Music Picker Modal removed - slideshows don't use music */}
 
         {/* Theme Picker Modal */}
         <Modal
@@ -1133,21 +989,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 2,
   },
-  musicSelectedContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f9f9f9",
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-  },
-  musicSelectedText: {
-    flex: 1,
-    fontSize: 16,
-    color: "#000",
-    marginLeft: 12,
-  },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -1215,50 +1056,12 @@ const styles = StyleSheet.create({
     color: "#1a365d",
     marginLeft: 12,
   },
-  musicOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-  },
-  musicOptionTextContainer: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  musicOptionText: {
-    fontSize: 16,
-    color: "#1a365d",
-    fontWeight: "600",
-  },
-  musicOptionDescription: {
-    fontSize: 12,
-    color: "#666",
-    marginTop: 2,
-  },
   modalSectionDescription: {
     fontSize: 12,
     color: "#666",
     paddingHorizontal: 16,
     paddingBottom: 8,
     fontStyle: "italic",
-  },
-  formatInfoBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f0f7ff",
-    padding: 12,
-    marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#cce5ff",
-  },
-  formatInfoText: {
-    fontSize: 12,
-    color: "#1a365d",
-    marginLeft: 8,
-    flex: 1,
   },
   themeOption: {
     padding: 16,

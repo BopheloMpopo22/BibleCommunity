@@ -20,29 +20,7 @@ class MeditationFirebaseService {
         throw new Error("User must be authenticated to create meditations");
       }
 
-      // Upload custom music to Firebase Storage if it's from phone
-      let uploadedMusic = meditation.music;
-      if (meditation.music && meditation.music.type === "phone" && meditation.music.uri) {
-        try {
-          // Upload audio file to Firebase Storage (using meditation_music to match default music path)
-          const uploadResult = await FirebaseStorageService.uploadAudio(
-            meditation.music.uri,
-            "meditation_music",
-            meditation.music.fileName
-          );
-          uploadedMusic = {
-            type: "phone",
-            uri: uploadResult.url,
-            url: uploadResult.url,
-            fileName: meditation.music.fileName,
-            storagePath: uploadResult.path,
-          };
-        } catch (uploadError) {
-          console.warn("Error uploading meditation music:", uploadError.message);
-          // Continue without music if upload fails
-          uploadedMusic = null;
-        }
-      }
+      // Music removed - slideshows don't use music
 
       // Upload images to Firebase Storage if they're from phone
       let uploadedImages = meditation.images || [];
@@ -96,7 +74,6 @@ class MeditationFirebaseService {
         coverImage: uploadedCoverImage,
         images: uploadedImages,
         video: meditation.video || null,
-        music: uploadedMusic,
         backgroundColor: meditation.backgroundColor || null,
         author: currentUser.displayName || "Anonymous",
         authorId: currentUser.uid,

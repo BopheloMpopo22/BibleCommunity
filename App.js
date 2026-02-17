@@ -36,6 +36,7 @@ import MeditationScreen from "./screens/MeditationScreen";
 import WordOfDayScreen from "./screens/WordOfDayScreen";
 import MyPrayersScreen from "./screens/MyPrayersScreen";
 import CreateMeditationScreen from "./screens/CreateMeditationScreen";
+import ScriptureSlideshowScreen from "./screens/ScriptureSlideshowScreen";
 import PartnerAuthScreen from "./screens/PartnerAuthScreen";
 import PartnerInfoScreen from "./screens/PartnerInfoScreen";
 import CreatePartnerPrayerScreen from "./screens/CreatePartnerPrayerScreen";
@@ -104,6 +105,10 @@ function PrayerStackScreen() {
       <PrayerStack.Screen
         name="CreateMeditation"
         component={CreateMeditationScreen}
+      />
+      <PrayerStack.Screen
+        name="ScriptureSlideshow"
+        component={ScriptureSlideshowScreen}
       />
       <PrayerStack.Screen name="PartnerAuth" component={PartnerAuthScreen} />
       <PrayerStack.Screen name="PartnerInfo" component={PartnerInfoScreen} />
