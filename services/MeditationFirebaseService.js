@@ -24,10 +24,10 @@ class MeditationFirebaseService {
       let uploadedMusic = meditation.music;
       if (meditation.music && meditation.music.type === "phone" && meditation.music.uri) {
         try {
-          // Upload audio file to Firebase Storage
+          // Upload audio file to Firebase Storage (using meditation_music to match default music path)
           const uploadResult = await FirebaseStorageService.uploadAudio(
             meditation.music.uri,
-            "meditations/music",
+            "meditation_music",
             meditation.music.fileName
           );
           uploadedMusic = {

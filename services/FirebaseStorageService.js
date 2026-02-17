@@ -216,11 +216,11 @@ class FirebaseStorageService {
   /**
    * Upload an audio file to Firebase Storage
    * @param {string} audioUri - Local file URI (file:// or content://)
-   * @param {string} path - Storage path (e.g., "meditations/music")
+   * @param {string} path - Storage path (e.g., "meditation_music")
    * @param {string} fileName - Optional custom filename, otherwise generates one
    * @returns {Promise<{url: string, path: string}>} Download URL and storage path
    */
-  static async uploadAudio(audioUri, path = "meditations/music", fileName = null) {
+  static async uploadAudio(audioUri, path = "meditation_music", fileName = null) {
     try {
       // Generate unique filename if not provided
       const uniqueFileName =
