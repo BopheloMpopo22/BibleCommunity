@@ -408,16 +408,6 @@ class PartnerFirebaseService {
       const allWords = [...words, ...uniqueLocalWords];
       console.log(`✅ Returning ${allWords.length} total words (${words.length} from Firebase, ${uniqueLocalWords.length} from local)`);
       
-      // DEBUG: Show alert with word count breakdown
-      try {
-        const { Alert } = require("react-native");
-        const currentUser = auth.currentUser;
-        Alert.alert(
-          "DEBUG: getAllPartnerWords",
-          `Firebase words: ${words.length}\nLocal words: ${localWords.length}\nUnique local: ${uniqueLocalWords.length}\nTotal returned: ${allWords.length}\n\nCurrent user: ${currentUser?.email || 'Not logged in'}\n\nScheduled words: ${scheduledWords.length}`
-        );
-      } catch (e) {}
-      
       return allWords;
     } catch (error) {
       console.warn("Error getting partner words from Firebase (using local only):", error.message);
@@ -550,6 +540,8 @@ class PartnerFirebaseService {
 }
 
 export default PartnerFirebaseService;
+
+
 
 
 
