@@ -232,6 +232,7 @@ const ScriptureSlideshowScreen = ({ navigation, route }) => {
           style={styles.viewToggleButton}
           onPress={() => setShowViewModal(true)}
         >
+          <Ionicons name="options-outline" size={20} color="#fff" />
           <Text style={styles.viewToggleButtonText}>View</Text>
         </TouchableOpacity>
       </View>
@@ -354,15 +355,20 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
   viewToggleButton: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: "rgba(255, 255, 255, 0.25)",
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.4)",
   },
   viewToggleButtonText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+    marginLeft: 6,
   },
   viewModalOverlay: {
     flex: 1,
@@ -484,7 +490,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#fff",
     marginTop: 60,
   },
   listContent: {
@@ -509,6 +515,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 20,
     marginBottom: 16,
+    borderWidth: 2,
+    borderColor: "#FF8C42", // Dark orange border
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
