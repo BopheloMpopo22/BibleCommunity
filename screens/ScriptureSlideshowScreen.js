@@ -23,6 +23,7 @@ const ScriptureSlideshowScreen = ({ navigation, route }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [viewMode, setViewMode] = useState("slideshow"); // "slideshow" or "list"
   const [showAddScriptureModal, setShowAddScriptureModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [newScriptureVerse, setNewScriptureVerse] = useState("");
   const [newScriptureReference, setNewScriptureReference] = useState("");
   const videoRef = useRef(null);
@@ -229,18 +230,51 @@ const ScriptureSlideshowScreen = ({ navigation, route }) => {
         </View>
         <TouchableOpacity
           style={styles.viewToggleButton}
-          onPress={() => setViewMode(viewMode === "slideshow" ? "list" : "slideshow")}
+          onPress={() => setShowViewModal(true)}
         >
-          <Ionicons
-            name={viewMode === "slideshow" ? "list" : "images"}
-            size={24}
-            color="#fff"
-          />
+          <Text style={styles.viewToggleButtonText}>View</Text>
         </TouchableOpacity>
       </View>
 
       {/* Content */}
       {viewMode === "slideshow" ? renderSlideshowView() : renderListView()}
+
+      {/* View Mode Modal */}
+      <Modal
+        visible={showViewModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowViewModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.viewModalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowViewModal(false)}
+        >
+          <View style={styles.viewModalContent}>
+            <TouchableOpacity
+              style={styles.viewOption}
+              onPress={() => {
+                setViewMode("slideshow");
+                setShowViewModal(false);
+              }}
+            >
+              <Ionicons name="images" size={24} color="#1a365d" />
+              <Text style={styles.viewOptionText}>Slideshow</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.viewOption, { borderBottomWidth: 0 }]}
+              onPress={() => {
+                setViewMode("list");
+                setShowViewModal(false);
+              }}
+            >
+              <Ionicons name="list" size={24} color="#1a365d" />
+              <Text style={styles.viewOptionText}>List</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Add Scripture Modal */}
       <Modal
@@ -320,7 +354,46 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
   viewToggleButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 8,
+  },
+  viewToggleButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  viewModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  viewModalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
     padding: 8,
+    minWidth: 200,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  viewOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+  },
+  viewOptionText: {
+    fontSize: 18,
+    color: "#1a365d",
+    marginLeft: 12,
+    fontWeight: "500",
   },
   slideshowContainer: {
     flex: 1,
