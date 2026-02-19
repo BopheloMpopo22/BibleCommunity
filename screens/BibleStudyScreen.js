@@ -342,7 +342,7 @@ const BibleStudyScreen = ({ route }) => {
               style={styles.backButton}
               onPress={() => setSelectedBook(null)}
             >
-              <Ionicons name="arrow-back" size={24} color="#1a365d" />
+              <Ionicons name="arrow-back" size={24} color="#fff" />
               <Text style={styles.backButtonText}>Back to Books</Text>
             </TouchableOpacity>
 
@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    color: "#1a365d",
+    color: "#fff",
     marginLeft: 10,
   },
   selectedBookTitle: {

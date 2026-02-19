@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { Video } from "expo-av";
 import { useFocusEffect } from "@react-navigation/native";
+import { auth } from "../config/firebase";
 
 const { width, height } = Dimensions.get("window");
 
@@ -24,9 +25,19 @@ const ScriptureSlideshowScreen = ({ navigation, route }) => {
   const [viewMode, setViewMode] = useState("slideshow"); // "slideshow" or "list"
   const [showAddScriptureModal, setShowAddScriptureModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [newScriptureVerse, setNewScriptureVerse] = useState("");
   const [newScriptureReference, setNewScriptureReference] = useState("");
+  const [isAuthor, setIsAuthor] = useState(false);
   const videoRef = useRef(null);
+
+  // Check if current user is the author
+  useEffect(() => {
+    const currentUser = auth.currentUser;
+    if (currentUser && category?.authorId) {
+      setIsAuthor(currentUser.uid === category.authorId);
+    }
+  }, [category]);
 
   const scriptures = category?.scriptures || [];
 
@@ -105,6 +116,38 @@ const ScriptureSlideshowScreen = ({ navigation, route }) => {
     }
   };
 
+  const handleDeleteSlideshow = async () => {
+    Alert.alert(
+      "Delete Slideshow",
+      "Are you sure you want to delete this slideshow? This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel", onPress: () => setShowDeleteModal(false) },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const { doc, deleteDoc } = await import("firebase/firestore");
+              const { db } = await import("../config/firebase");
+              
+              if (category?.id) {
+                await deleteDoc(doc(db, "meditations", category.id));
+                Alert.alert("Success", "Slideshow deleted successfully!");
+                navigation.goBack();
+              } else {
+                Alert.alert("Error", "Unable to delete slideshow. Please try again.");
+              }
+            } catch (error) {
+              console.error("Error deleting slideshow:", error);
+              Alert.alert("Error", "Failed to delete slideshow. Please try again.");
+            }
+            setShowDeleteModal(false);
+          },
+        },
+      ]
+    );
+  };
+
   const renderSlideshowView = () => {
     if (!currentScripture) {
       return (
@@ -151,7 +194,7 @@ const ScriptureSlideshowScreen = ({ navigation, route }) => {
         >
           <Ionicons
             name="chevron-back"
-            size={32}
+            size={20}
             color={currentIndex === 0 ? "#999" : "#fff"}
           />
         </TouchableOpacity>
@@ -167,21 +210,27 @@ const ScriptureSlideshowScreen = ({ navigation, route }) => {
         >
           <Ionicons
             name="chevron-forward"
-            size={32}
+            size={20}
             color={currentIndex === scriptures.length - 1 ? "#999" : "#fff"}
           />
         </TouchableOpacity>
 
-        {/* Scripture card */}
-        <View style={styles.scriptureCard}>
-          <Text style={styles.scriptureReference}>{currentScripture.reference}</Text>
-          <Text style={styles.scriptureVerse}>"{currentScripture.verse}"</Text>
-          <View style={styles.slideIndicator}>
-            <Text style={styles.slideIndicatorText}>
-              {currentIndex + 1} / {scriptures.length}
-            </Text>
+        {/* Scripture card - now scrollable */}
+        <ScrollView 
+          style={styles.scriptureCardScroll}
+          contentContainerStyle={styles.scriptureCardContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.scriptureCard}>
+            <Text style={styles.scriptureReference}>{currentScripture.reference}</Text>
+            <Text style={styles.scriptureVerse}>"{currentScripture.verse}"</Text>
+            <View style={styles.slideIndicator}>
+              <Text style={styles.slideIndicatorText}>
+                {currentIndex + 1} / {scriptures.length}
+              </Text>
+            </View>
           </View>
-        </View>
+        </ScrollView>
       </View>
     );
   };
@@ -217,12 +266,22 @@ const ScriptureSlideshowScreen = ({ navigation, route }) => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          {isAuthor && (
+            <TouchableOpacity
+              style={styles.menuButton}
+              onPress={() => setShowDeleteModal(true)}
+            >
+              <Ionicons name="ellipsis-vertical" size={20} color="#fff" />
+            </TouchableOpacity>
+          )}
+        </View>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>
             Scriptures about {category?.title || "Topic"}
@@ -321,6 +380,36 @@ const ScriptureSlideshowScreen = ({ navigation, route }) => {
           </View>
         </View>
       </Modal>
+
+      {/* Delete Modal */}
+      <Modal
+        visible={showDeleteModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.viewModalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowDeleteModal(false)}
+        >
+          <View style={styles.deleteModalContent}>
+            <TouchableOpacity
+              style={styles.deleteOption}
+              onPress={handleDeleteSlideshow}
+            >
+              <Ionicons name="trash-outline" size={24} color="#ff4444" />
+              <Text style={styles.deleteOptionText}>Delete Slideshow</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.deleteOption, { borderBottomWidth: 0 }]}
+              onPress={() => setShowDeleteModal(false)}
+            >
+              <Text style={styles.cancelOptionText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -342,8 +431,16 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 10,
   },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   backButton: {
     padding: 8,
+  },
+  menuButton: {
+    padding: 8,
+    marginLeft: 4,
   },
   headerContent: {
     flex: 1,
@@ -434,11 +531,11 @@ const styles = StyleSheet.create({
   navArrow: {
     position: "absolute",
     top: "50%",
-    transform: [{ translateY: -20 }],
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    borderRadius: 25,
-    width: 50,
-    height: 50,
+    transform: [{ translateY: -15 }],
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    borderRadius: 20,
+    width: 40,
+    height: 40,
     justifyContent: "center",
     alignItems: "center",
     zIndex: 5,
@@ -452,11 +549,18 @@ const styles = StyleSheet.create({
   navArrowDisabled: {
     opacity: 0.3,
   },
-  scriptureCard: {
+  scriptureCardScroll: {
     position: "absolute",
     bottom: 100,
     left: 20,
     right: 20,
+    maxHeight: height * 0.5,
+  },
+  scriptureCardContent: {
+    flexGrow: 1,
+    justifyContent: "flex-end",
+  },
+  scriptureCard: {
     backgroundColor: "rgba(255, 255, 255, 0.95)",
     borderRadius: 20,
     padding: 24,
@@ -619,6 +723,37 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  deleteModalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 8,
+    minWidth: 200,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  deleteOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+  },
+  deleteOptionText: {
+    fontSize: 18,
+    color: "#ff4444",
+    marginLeft: 12,
+    fontWeight: "500",
+  },
+  cancelOptionText: {
+    fontSize: 18,
+    color: "#1a365d",
+    fontWeight: "500",
+    textAlign: "center",
   },
 });
 

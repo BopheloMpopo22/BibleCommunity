@@ -627,15 +627,11 @@ const styles = StyleSheet.create({
   chapterNavButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: "#f8f9ff",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   chapterNavText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
     color: "#1a365d",
     marginHorizontal: 8,
