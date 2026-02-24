@@ -226,7 +226,11 @@ const MediaPostCard = ({
                   isLooping={false}
                   useNativeControls={false}
                   isMuted={isMuted}
-                  onError={(error) => console.log("Video error:", error)}
+                  onError={(error) => {
+                    console.log("Video error:", error);
+                    // Don't pause on error - let user retry
+                    setIsVideoPlaying(false);
+                  }}
                   onLoad={(status) => {
                     try {
                       const natural = status?.naturalSize;
@@ -259,7 +263,16 @@ const MediaPostCard = ({
                     }
                   }}
                   onPlaybackStatusUpdate={(status) => {
-                    setIsVideoPlaying(status.isPlaying);
+                    // Only update if status is valid
+                    if (status && status.isPlaying !== undefined) {
+                      setIsVideoPlaying(status.isPlaying);
+                    }
+                    
+                    // Handle buffering - don't pause on buffering
+                    if (status.isBuffering && status.isPlaying) {
+                      // Video is buffering but still playing - don't change state
+                      return;
+                    }
 
                     // Track when video starts playing
                     if (status.isPlaying && !hasVideoStarted) {
@@ -431,7 +444,17 @@ const MediaPostCard = ({
                   }
                 }}
                 onPlaybackStatusUpdate={(status) => {
-                  setIsVideoPlaying(status.isPlaying);
+                  // Only update if status is valid
+                  if (status && status.isPlaying !== undefined) {
+                    setIsVideoPlaying(status.isPlaying);
+                  }
+                  
+                  // Handle buffering - don't pause on buffering
+                  if (status.isBuffering && status.isPlaying) {
+                    // Video is buffering but still playing - don't change state
+                    return;
+                  }
+                  
                   if (
                     status.positionMillis != null ||
                     status.durationMillis != null

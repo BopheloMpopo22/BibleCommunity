@@ -196,7 +196,8 @@ class PostService {
         } else if (data.videos && data.videos.length > 0) {
           media = {
             type: "video",
-            uri: data.videos[0].uri, // Use first video
+            uri: data.videos[0].uri || data.videos[0].url, // Use first video
+            thumbnail: data.videos[0].thumbnail || data.media?.thumbnail, // Include thumbnail if available
           };
         }
 
@@ -254,6 +255,17 @@ class PostService {
         const dateB = new Date(b.createdAt?.toDate?.() || b.createdAt || b.timestamp || 0);
         return dateB - dateA;
       });
+      
+      // Cache posts to local storage for offline access
+      try {
+        const postsToCache = allPosts.slice(0, limit);
+        for (const post of postsToCache) {
+          await this.storePostLocally(post);
+        }
+      } catch (cacheError) {
+        console.warn("Error caching posts:", cacheError.message);
+        // Non-critical, continue
+      }
       
       return allPosts.slice(0, limit);
     } catch (error) {

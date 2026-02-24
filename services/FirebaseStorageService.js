@@ -177,32 +177,57 @@ class FirebaseStorageService {
    */
   static async uploadVideos(videos, path = "posts/videos") {
     try {
-      const uploadPromises = videos.map((video) => {
+      const uploadPromises = videos.map(async (video) => {
         if (!video.uri) {
           console.warn("Video missing URI, skipping:", video);
           return null;
         }
         // Check if already a Firebase URL (don't re-upload)
         if (video.uri.startsWith("https://firebasestorage.googleapis.com")) {
-          return Promise.resolve({
+          // Still need to upload thumbnail if it's local
+          let thumbnailUrl = video.thumbnail;
+          if (video.thumbnail && !video.thumbnail.startsWith("https://firebasestorage.googleapis.com") && !video.thumbnail.startsWith("http")) {
+            try {
+              const thumbnailResult = await this.uploadImage(video.thumbnail, `${path}/thumbnails`);
+              thumbnailUrl = thumbnailResult.url;
+            } catch (thumbError) {
+              console.warn("Error uploading thumbnail:", thumbError.message);
+            }
+          }
+          return {
             id: video.id || Date.now().toString(),
             uri: video.uri,
             url: video.uri,
             type: "video",
-            thumbnail: video.thumbnail,
+            thumbnail: thumbnailUrl,
             duration: video.duration,
             ...video,
-          });
+          };
         }
-        return this.uploadVideo(video.uri, path).then((result) => ({
+        
+        // Upload video
+        const result = await this.uploadVideo(video.uri, path);
+        
+        // Upload thumbnail separately if it exists and is local
+        let thumbnailUrl = result.thumbnail || video.thumbnail;
+        if (video.thumbnail && !video.thumbnail.startsWith("https://firebasestorage.googleapis.com") && !video.thumbnail.startsWith("http")) {
+          try {
+            const thumbnailResult = await this.uploadImage(video.thumbnail, `${path}/thumbnails`);
+            thumbnailUrl = thumbnailResult.url;
+          } catch (thumbError) {
+            console.warn("Error uploading thumbnail:", thumbError.message);
+          }
+        }
+        
+        return {
           id: video.id || Date.now().toString(),
           uri: result.url,
           url: result.url,
           type: "video",
-          thumbnail: result.thumbnail || video.thumbnail,
+          thumbnail: thumbnailUrl,
           duration: video.duration,
           fileName: video.fileName,
-        }));
+        };
       });
 
       const results = await Promise.all(uploadPromises);
@@ -285,14 +310,14 @@ class FirebaseStorageService {
       if (results.videos.length > 0) {
         results.media = {
           type: "video",
-          uri: results.videos[0].url,
+          uri: results.videos[0].url || results.videos[0].uri,
           thumbnail: results.videos[0].thumbnail,
           duration: results.videos[0].duration,
         };
       } else if (results.images.length > 0) {
         results.media = {
           type: "image",
-          uri: results.images[0].url,
+          uri: results.images[0].url || results.images[0].uri,
         };
       }
 

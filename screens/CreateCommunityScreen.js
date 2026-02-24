@@ -12,6 +12,7 @@ import {
   Modal,
   FlatList,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -232,9 +233,14 @@ const CreateCommunityScreen = ({ navigation }) => {
             onPress={handleSubmit}
             disabled={loading}
           >
-            <Text style={styles.submitButtonText}>
-              {loading ? "Creating..." : "Create"}
-            </Text>
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color="#fff" />
+                <Text style={styles.submitButtonText}>Creating...</Text>
+              </View>
+            ) : (
+              <Text style={styles.submitButtonText}>Create</Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -549,6 +555,11 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   formContainer: {
     flex: 1,
