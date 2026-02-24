@@ -200,13 +200,24 @@ const EnhancedCommunityCard = ({ community, onPress, onJoin, navigation }) => {
         setIsJoined(false);
       } else {
         // Join community
-        await CommunityService.joinCommunity(community.id);
-        setIsJoined(true);
-        Alert.alert("Welcome!", "You've joined the community! 🙏");
+        const result = await CommunityService.joinCommunity(community.id);
+        if (result.success) {
+          setIsJoined(true);
+          Alert.alert("Welcome!", "You've joined the community! 🙏");
+        }
       }
 
-      loadCommunityStats(); // Refresh stats
-      checkMembership(); // Re-check membership
+      // Immediately fetch fresh data from Firebase and update UI
+      const updatedCommunity = await CommunityService.getCommunity(community.id);
+      if (updatedCommunity) {
+        // Update the community prop data with fresh member count
+        community.memberCount = updatedCommunity.memberCount;
+        community.members = updatedCommunity.members;
+      }
+
+      // Refresh stats and membership check
+      await loadCommunityStats();
+      await checkMembership();
 
       if (onJoin) {
         onJoin(community.id, !isJoined);

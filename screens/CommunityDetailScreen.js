@@ -432,11 +432,16 @@ const CommunityDetailScreen = ({ navigation, route }) => {
       } else {
         const result = await CommunityService.joinCommunity(community.id);
         if (result.success) {
-          setIsJoined(true);
+          // Fetch fresh data from Firebase
           const communityData = await CommunityService.getCommunity(community.id);
           if (communityData) {
             setMemberCount(communityData.memberCount || 0);
+            // Update the community object with fresh data
+            community.memberCount = communityData.memberCount;
+            community.members = communityData.members;
           }
+          // Re-check membership to ensure UI updates
+          await checkMembership();
           loadCommunityData(); // Refresh data
           Alert.alert("Welcome!", "You've joined the community! 🙏");
         }
